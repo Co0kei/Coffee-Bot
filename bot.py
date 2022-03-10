@@ -131,6 +131,8 @@ async def on_command_error(ctx, error):
         await ctx.send(error)
 
 
+# test
+
 # Load extensions
 initial_extensions = (
     'cogs.owner',
