@@ -18,7 +18,7 @@ class InteractionsCog(commands.Cog):
     def getReportsChannel(self, guild: discord.Guild) -> discord.TextChannel:
         reportsChannel = None;
         for textChannel in guild.text_channels:
-            if textChannel.name == "reports":
+            if "reports" in textChannel.name:
                 reportsChannel = textChannel
                 break
         return reportsChannel
@@ -33,6 +33,9 @@ class InteractionsCog(commands.Cog):
         return embed
 
     async def handleMessageReport(self, interaction: discord.Interaction, message: discord.Message):
+
+        log.info(f'{interaction.user} used command \'Report Message\'')
+        self.bot.commands_used += 1
 
         if message.guild is None:
             await interaction.response.send_message("Please use this command in a Discord server.")
@@ -97,6 +100,9 @@ class InteractionsCog(commands.Cog):
 
     async def handleUserReport(self, interaction: discord.Interaction, member: discord.Member):
 
+        log.info(f'{interaction.user} used command \'Report User\'')
+        self.bot.commands_used += 1
+
         if isinstance(member, discord.User):
             await interaction.response.send_message("Please use this command in a Discord server.")
             return
@@ -140,6 +146,9 @@ class InteractionsCog(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
     async def handleHelpCommand(self, interaction: discord.Interaction):
+        log.info(f'{interaction.user} used command \'help\'')
+        self.bot.commands_used += 1
+
         embed = discord.Embed(title="Help", description=f'Support server: https://discord.gg/rcUzqaQN8k')
         embed.add_field(name="Commands", value=
         f'/help - Displays help menu\n'
@@ -147,7 +156,9 @@ class InteractionsCog(commands.Cog):
 
         embed.add_field(name="Setup", value=
         f'To set me up in your server just invite me, using the button on my profile, and then create a channel called \'reports\'! '
-        f'Now you can right click on a user or message then scroll to Apps and click the report button!', inline=False)
+        f'Now you can right click on a user or message then scroll to Apps and click the report button!\n'
+        f'Discord is sometimes annoying so if no Apps section is showing after you right click a message or user. then do CTRL + R to reload Discord',
+                        inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=False)
 
 
