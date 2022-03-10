@@ -3,6 +3,7 @@ import logging
 import sys
 import traceback
 
+import aiohttp
 import discord
 from discord.ext import commands
 
@@ -14,10 +15,27 @@ logging.basicConfig(
 
 log = logging.getLogger(__name__)
 
-# Define bot
-dev_server_id = 759418498228158465
+with open('config.json', 'r') as f:
+    botsettings = json.load(f)
 
-bot = commands.Bot(command_prefix=['-'], description="A discord bot!", owner_id=452187819738267687,
+    operatingSys = sys.platform
+    print("USING OPERATING SYS: " + operatingSys)
+
+    dev_server_id = botsettings["dev_server_id"]
+    webhook_id = botsettings["webhook_id"]
+    webhook_token = botsettings["webhook_token"]
+
+    if sys.platform == "win32":
+        token = botsettings["dev_bot_token"]  # development bot
+        prefix = botsettings["dev_prefix"]
+    else:
+        token = botsettings["token"]  # production bot
+        prefix = botsettings["prefix"]
+
+    f.close()
+
+# Define bot
+bot = commands.Bot(command_prefix=[prefix], description="A discord bot!", owner_id=452187819738267687,
                    case_insensitive=True,
                    allowed_mentions=discord.AllowedMentions(roles=False, everyone=False, users=True,
                                                             replied_user=False),
@@ -81,29 +99,14 @@ async def devHelpCommand(interaction: discord.Interaction):
     await bot.get_cog("InteractionsCog").handleHelpCommand(interaction)
 
 
-# Msg commands
-@commands.is_owner()
-@bot.command()
-async def sync(ctx):
-    await ctx.send("processing")
-    a = await tree.sync(guild=discord.Object(id=dev_server_id))
-    await ctx.message.reply("Dev server interactions synced: " + str(a))
-
-
-@commands.is_owner()
-@bot.command()
-async def globalsync(ctx):
-    await ctx.send("processing global sync")
-    a = await tree.sync()
-    await ctx.message.reply("Global interaction sync done: " + str(a))
-
-
 # Events
 @bot.event
 async def on_ready():
     log.info('Bot online!')
     log.info(f'Logged in as {bot.user} (ID: {bot.user.id})')
     log.info(f'Connected to {(len(bot.guilds))} Discord Servers.')
+
+    bot.hook = discord.Webhook.partial(webhook_id, webhook_token, session=aiohttp.ClientSession(loop=bot.loop))
 
     bot.uptime = discord.utils.utcnow()
 
@@ -114,9 +117,8 @@ async def on_command_error(ctx, error):
         await ctx.author.send('This command cannot be used in private messages.')
     elif isinstance(error, commands.DisabledCommand):
         await ctx.author.send('Sorry. This command is disabled and cannot be used.')
-
     elif isinstance(error, commands.NotOwner):
-        await ctx.author.send('Sorry. This command can\'t be used my you.')
+        await ctx.author.send('Sorry. This command can\'t be used by you.')
 
     elif isinstance(error, commands.CommandInvokeError):
         original = error.original
@@ -132,7 +134,9 @@ async def on_command_error(ctx, error):
 # Load extensions
 initial_extensions = (
     'cogs.owner',
-    'cogs.interactions'
+    'cogs.interactions',
+    'cogs.events',
+    'cogs.tasks'
 )
 
 for extension in initial_extensions:
@@ -142,10 +146,5 @@ for extension in initial_extensions:
         print(f'Failed to load extension {extension}.', file=sys.stderr)
         traceback.print_exc()
 
-# Retrieve token and start bot
-with open('config.json', 'r') as f:
-    botsettings = json.load(f)
-    token = botsettings["token"]
-    f.close()
-
+# Start bot
 bot.run(token)
