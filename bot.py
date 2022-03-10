@@ -1,12 +1,9 @@
-# Discord imports
 import json
-# Other imports
 import logging
 import sys
 import traceback
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 # Setup logging
@@ -25,39 +22,83 @@ bot = commands.Bot(command_prefix=['-'], description="A discord bot!", owner_id=
                    allowed_mentions=discord.AllowedMentions(roles=False, everyone=False, users=True,
                                                             replied_user=False),
                    intents=discord.Intents.all(), help_command=None)
-tree = app_commands.CommandTree(bot)
+tree = bot.tree  # app_commands.CommandTree(bot)
 
 
-# Interactions
-@tree.context_menu(name='Report User', guild=discord.Object(id=dev_server_id))
-async def reportUser(interaction: discord.Interaction, member: discord.Member):
-    await interaction.response.send_message('Done', ephemeral=True)
+# Interactions - GLOBAL
+
+# Report message
+@tree.context_menu(name='Report Message')
+async def globalReportMessage(interaction: discord.Interaction, message: discord.Message):
+    await bot.get_cog("InteractionsCog").handleMessageReport(interaction, message)
 
 
-@tree.context_menu(name='Report Message', guild=discord.Object(id=dev_server_id))
-async def reportMessage(interaction: discord.Interaction, message: discord.Message):
-    if not message.content:
-        await interaction.response.send_message('No content!', ephemeral=True)
-        return
-
-    await interaction.response.send_message("Done", ephemeral=True)
+# Report User
+@tree.context_menu(name='Report User')
+async def globalReportUser(interaction: discord.Interaction, member: discord.Member):
+    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member)
 
 
-@tree.command(name='report', guild=discord.Object(id=dev_server_id))
-async def reportCommand(interaction: discord.Interaction, member: discord.Member, reason: str):
-    await interaction.response.send_message(f'{member=} {reason=}', ephemeral=True)
+# Reports command
+@tree.command(name='report', description='Report a member with a reason for staff to see.')
+@discord.app_commands.describe(member='The member you are reporting.')
+async def globalReportCommand(interaction: discord.Interaction, member: discord.User):
+    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member)
 
 
-# A command
+# Help command
+@tree.command(name='help', description='Information on commands & bot setup')
+async def globalHelpCommand(interaction: discord.Interaction):
+    await bot.get_cog("InteractionsCog").handleHelpCommand(interaction)
+
+
+# Interactions - dev server
+
+# Report message
+@tree.context_menu(name='Dev - Report Message', guild=discord.Object(id=dev_server_id))
+async def devReportMessage(interaction: discord.Interaction, message: discord.Message):
+    await bot.get_cog("InteractionsCog").handleMessageReport(interaction, message)
+
+
+# Report User
+@tree.context_menu(name='Dev - Report User', guild=discord.Object(id=dev_server_id))
+async def devReportUser(interaction: discord.Interaction, member: discord.Member):
+    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member)
+
+
+# Reports command
+@tree.command(name='devreport', description='Report a member with a reason for staff to see.',
+              guild=discord.Object(id=dev_server_id))
+@discord.app_commands.describe(member='The member you are reporting.')
+async def devReportCommand(interaction: discord.Interaction, member: discord.User):
+    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member)
+
+
+# Help command
+@tree.command(name='devhelp', description='Information on commands & bot setup',
+              guild=discord.Object(id=dev_server_id))
+async def devHelpCommand(interaction: discord.Interaction):
+    await bot.get_cog("InteractionsCog").handleHelpCommand(interaction)
+
+
+# Msg commands
 @commands.is_owner()
 @bot.command()
 async def sync(ctx):
-    await tree.sync(guild=discord.Object(id=759418498228158465))
-    await ctx.message.reply("done")
+    await ctx.send("processing")
+    a = await tree.sync(guild=discord.Object(id=dev_server_id))
+    await ctx.message.reply("Dev server interactions synced: " + str(a))
+
+
+@commands.is_owner()
+@bot.command()
+async def globalsync(ctx):
+    await ctx.send("processing global sync")
+    a = await tree.sync()
+    await ctx.message.reply("Global interaction sync done: " + str(a))
 
 
 # Events
-
 @bot.event
 async def on_ready():
     log.info('Bot online!')
@@ -73,12 +114,17 @@ async def on_command_error(ctx, error):
         await ctx.author.send('This command cannot be used in private messages.')
     elif isinstance(error, commands.DisabledCommand):
         await ctx.author.send('Sorry. This command is disabled and cannot be used.')
+
+    elif isinstance(error, commands.NotOwner):
+        await ctx.author.send('Sorry. This command can\'t be used my you.')
+
     elif isinstance(error, commands.CommandInvokeError):
         original = error.original
         if not isinstance(original, discord.HTTPException):
             print(f'Error in {ctx.command.qualified_name}:', file=sys.stderr)
             traceback.print_tb(original.__traceback__)
             print(f'{original.__class__.__name__}: {original}', file=sys.stderr)
+
     elif isinstance(error, commands.ArgumentParsingError):
         await ctx.send(error)
 
@@ -86,7 +132,7 @@ async def on_command_error(ctx, error):
 # Load extensions
 initial_extensions = (
     'cogs.owner',
-    'cogs.other'
+    'cogs.interactions'
 )
 
 for extension in initial_extensions:

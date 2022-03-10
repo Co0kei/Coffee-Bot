@@ -82,7 +82,7 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.command(aliases=["r"])
-    async def reload(self, ctx, *, module=None):
+    async def reload(self, ctx, *, module="interactions"):
         """" Reload a specific cog """
         if module is None:
             await ctx.send(f"\U0000274c Enter a cog to reload!")
@@ -102,9 +102,9 @@ class OwnerCog(commands.Cog):
     async def about(self, ctx):
         """Tells you information about the bot itself """
 
-        embed = discord.Embed(description='Latest Changes:\n')
+        embed = discord.Embed()  # description='Latest Changes:\n')
         embed.title = 'Official Bot Server Invite'
-        embed.url = 'https://discord.gg/asd'
+        embed.url = 'https://discord.gg/rcUzqaQN8k'
         embed.colour = discord.Colour.blurple()
 
         owner = self.bot.get_user(self.bot.owner_id)
