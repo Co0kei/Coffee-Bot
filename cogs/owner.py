@@ -5,6 +5,8 @@ import traceback
 import discord
 from discord.ext import commands
 
+from bot import dev_server_id
+
 log = logging.getLogger(__name__)
 
 
@@ -98,9 +100,24 @@ class OwnerCog(commands.Cog):
             traceback.print_exc()
             await ctx.send(f"\U0000274c {e}")
 
+    @commands.is_owner()
+    @commands.command()
+    async def sync(self, ctx):
+        await ctx.send("processing")
+        a = await self.bot.tree.sync(guild=discord.Object(id=dev_server_id))
+        await ctx.message.reply("Dev server interactions synced: " + str(a))
+
+    @commands.is_owner()
+    @commands.command()
+    async def globalsync(self, ctx):
+        await ctx.send("processing global sync")
+        a = await self.bot.tree.sync()
+        await ctx.message.reply("Global interaction sync done: " + str(a))
+
     @commands.command()
     async def about(self, ctx):
         """Tells you information about the bot itself """
+        self.bot.commands_used += 1
 
         embed = discord.Embed()  # description='Latest Changes:\n')
         embed.title = 'Official Bot Server Invite'
@@ -138,6 +155,8 @@ class OwnerCog(commands.Cog):
 
         #   version = pkg_resources.get_distribution('discord.py').version
         embed.add_field(name='Guilds', value=guilds)
+        embed.add_field(name='Commands Used', value=self.bot.commands_used)
+
         # embed.add_field(name='Commands Run', value=sum(self.bot.command_stats.values()))
         # embed.add_field(name='Uptime', value=self.get_bot_uptime(brief=True))
         #   embed.set_footer(text=f'Made with discord.py v{version}', icon_url='http://i.imgur.com/5BFecvA.png')
