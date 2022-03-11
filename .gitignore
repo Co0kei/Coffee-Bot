@@ -5,6 +5,8 @@ __pycache__/
 
 config.json
 stats.json
+*.json
+
 .idea/
 
 # C extensions
