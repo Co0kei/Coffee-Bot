@@ -11,31 +11,22 @@ class InteractionsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        log.info("loaded")
-
     def getReportsChannel(self, guild: discord.Guild) -> discord.TextChannel:
-        reportsChannel = None;
-        for textChannel in guild.text_channels:
-            if "reports" in textChannel.name:
-                reportsChannel = textChannel
-                break
+        reportsChannel = None
+        if str(guild.id) in self.bot.guild_settings:
+            if "reports_channel_id" in self.bot.guild_settings[str(guild.id)]:
+                reportsChannel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["reports_channel_id"])
         return reportsChannel
-
-    # Message reports
 
     def getNoReportsChannelEmbed(self) -> discord.Embed:
         embed = discord.Embed(title="Configuration Error")
-        embed.description = f'This Discord server has not been configured yet.\nPlease ask a server administrator to create a text channel named \'reports\'' \
+        embed.description = f'This Discord server has not been configured yet.\nPlease ask a server administrator to use the /settings command and set a reports channel.' \
                             f'\nCurrently I don\'t know which channel to send reports to!'
         embed.colour = discord.Colour.red()
         return embed
 
+    # Message reports
     async def handleMessageReport(self, interaction: discord.Interaction, message: discord.Message):
-
-        log.info(f'{interaction.user} used command \'Report Message\'')
-        self.bot.commands_used += 1
 
         if message.guild is None:
             await interaction.response.send_message("Please use this command in a Discord server.")
@@ -100,9 +91,6 @@ class InteractionsCog(commands.Cog):
 
     async def handleUserReport(self, interaction: discord.Interaction, member: discord.Member):
 
-        log.info(f'{interaction.user} used command \'Report User\'')
-        self.bot.commands_used += 1
-
         if isinstance(member, discord.User):
             await interaction.response.send_message("Please use this command in a Discord server.")
             return
@@ -146,20 +134,166 @@ class InteractionsCog(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
     async def handleHelpCommand(self, interaction: discord.Interaction):
-        log.info(f'{interaction.user} used command \'help\'')
-        self.bot.commands_used += 1
 
         embed = discord.Embed(title="Help", description=f'Support server: https://discord.gg/rcUzqaQN8k')
         embed.add_field(name="Commands", value=
         f'/help - Displays help menu\n'
-        f'/report - Used to report a user as mobile devices do not support context menus', inline=False)
+        f'/report - Used to report a user as mobile devices do not support context menus\n'
+        f'/settings - Used to setup the bot in your server.', inline=False)
 
         embed.add_field(name="Setup", value=
-        f'To set me up in your server just invite me, using the button on my profile, and then create a channel called \'reports\'! '
+        f'To set me up in your server just invite me, using the button on my profile, and then enter a channel name in the /settings command for reports to go to.'
         f'Now you can right click on a user or message then scroll to Apps and click the report button!\n'
         f'Discord is sometimes annoying so if no Apps section is showing after you right click a message or user. then do CTRL + R to reload Discord',
                         inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=False)
+
+    async def handleSettingsCommand(self, interaction: discord.Interaction):
+
+        if interaction.guild is None:
+            await interaction.response.send_message("Please use this command in a Discord server.")
+            return
+
+        # check permissions is admin or manage server
+        member = interaction.guild.get_member(interaction.user.id)
+
+        permissions = [
+            (name.replace('_', ' ').title(), value)
+            for name, value in member.guild_permissions
+        ]
+
+        allowed = [name for name, value in permissions if value]
+
+        if "Administrator" in allowed or "Manage Guild" in allowed:
+            pass
+        else:
+            await interaction.response.send_message("You must have the manage server permissions to use this.",
+                                                    ephemeral=True)
+            return
+
+        if str(interaction.guild.id) in self.bot.guild_settings:
+
+            if "reports_channel_id" in self.bot.guild_settings[str(interaction.guild.id)]:
+                reports_channel = interaction.guild.get_channel(
+                    self.bot.guild_settings[str(interaction.guild.id)]["reports_channel_id"])
+                if reports_channel is None:
+                    reports_channel = "None"
+                else:
+                    reports_channel = reports_channel.mention
+            else:
+                reports_channel = "None"
+
+        else:
+            reports_channel = "None"
+
+        embed = discord.Embed(title="Settings",
+                              description=f'Click a button to edit a value.\n\n**Reports Channel:** {reports_channel}')
+        # f'Role to get tagged for each report: @apple\n'
+        # f'Banned Role: @banned\n'
+        # f'Allow members to report bots or messages from bots? yes\n'
+        # f'Allow members to report server admins or messages from admins? yes')
+
+        view = self.SettingButtons()
+
+        await interaction.response.send_message(embed=embed, ephemeral=False, view=view)
+
+        origMsg = await interaction.original_message()
+
+        view.setMessage(origMsg)
+        view.setRequiredUserId(interaction.user.id)
+        view.setBot(self.bot)
+
+    class SettingButtons(discord.ui.View):
+        def __init__(self, timeout=30):
+            super().__init__(timeout=timeout)
+
+            self.message = None  # the original interaction message
+            self.userID = None  # the user which is allowed to click the buttons
+            self.bot = None  # the main bot instance
+
+            self.reportsChannel = None  # the reports channel
+
+        def setMessage(self, message: discord.Message):
+            self.message = message
+
+        def setRequiredUserId(self, userID: int):
+            self.userID = userID
+
+        def setBot(self, bot: discord.Client):
+            self.bot = bot
+
+        async def on_timeout(self) -> None:
+            await self.message.edit(view=None)
+
+        async def interaction_check(self, interaction: discord.Interaction) -> bool:
+            if interaction.user.id == self.userID:
+                return True
+            else:
+                await interaction.response.send_message("Sorry, you cannot use this.", ephemeral=True)
+                return False
+
+        @discord.ui.button(label='Reports Channel', style=discord.ButtonStyle.green)
+        async def reportsChannel(self, button: discord.ui.Button, interaction: discord.Interaction):
+
+            reportsChannelModel = self.ReportsChannelModel()
+
+            await interaction.response.send_modal(reportsChannelModel)
+
+            await reportsChannelModel.wait()  # Wait for the modal to stop listening
+
+            self.reportsChannel = reportsChannelModel.channel.value
+            if self.reportsChannel.startswith("#"):
+                self.reportsChannel = self.reportsChannel[1:]
+
+            channel = None
+            for textChannel in interaction.guild.text_channels:
+                if textChannel.name == self.reportsChannel.lower():
+                    channel = textChannel
+
+            if channel is not None:
+                embed = discord.Embed(title="Settings", description=f'**Reports Channel:** {channel.mention}')
+                await self.message.edit(embed=embed)
+
+                if not str(interaction.guild.id) in self.bot.guild_settings:
+                    self.bot.guild_settings[str(interaction.guild.id)] = {}
+
+                self.bot.guild_settings[str(interaction.guild.id)]["reports_channel_id"] = channel.id
+
+        @discord.ui.button(label='Finish', style=discord.ButtonStyle.grey)
+        async def finish(self, button: discord.ui.Button, interaction: discord.Interaction):
+            await self.on_timeout()
+            self.stop()
+
+        class ReportsChannelModel(ui.Modal, title="Reports Channel"):
+            channel = ui.TextInput(label='Reports Channel', style=discord.TextStyle.short,
+                                   placeholder="Please enter the channel name, such as #reports",
+                                   required=True, max_length=1000)
+            member = None
+
+            def setMember(self, msg: discord.Member):
+                self.member = msg
+
+            async def on_submit(self, interaction: discord.Interaction):
+
+                reportsChannel = self.channel.value
+
+                if reportsChannel.startswith("#"):
+                    reportsChannel = reportsChannel[1:]
+
+                channel = None
+                for textChannel in interaction.guild.text_channels:
+                    if textChannel.name == reportsChannel.lower():
+                        channel = textChannel
+
+                if channel is None:
+                    embed = discord.Embed(title="Channel not found", description="Please enter a valid channel name.",
+                                          colour=discord.Colour.dark_red())
+                else:
+                    embed = discord.Embed(title="Reports Channel Updated")
+                    embed.description = f"Successfully updated the reports channel to {channel.mention}"
+                    embed.colour = discord.Colour.green()
+
+                await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 def setup(bot):
