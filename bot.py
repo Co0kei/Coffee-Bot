@@ -2,10 +2,14 @@ import json
 import logging
 import sys
 import traceback
+from pathlib import Path
 
 import aiohttp
 import discord
 from discord.ext import commands
+
+# if __name__ != '__main__':
+#     print("Retunring an name is not main")
 
 # Setup logging
 logging.basicConfig(
@@ -13,13 +17,30 @@ logging.basicConfig(
     format='[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s',
     datefmt='%I:%M:%S %p')
 
+
+class LoggingFilter(logging.Filter):
+    def filter(self, record):
+        # print(record.getMessage())
+        if record.getMessage().startswith('Shard ID None has sent the RESUME payload.') \
+                or record.getMessage().startswith('Shard ID None has successfully RESUMED session') \
+                or record.getMessage().startswith('Shard ID None has sent the IDENTIFY payload.') \
+                or record.getMessage().startswith('Shard ID None has connected to Gateway: ["') \
+                or record.getMessage().startswith('logging in using static token') \
+                or record.getMessage().startswith('PyNaCl is not installed, voice will NOT be supported'):
+            return False  # dont log it
+        return True
+
+
+logging.getLogger('discord.gateway').addFilter(LoggingFilter())
+logging.getLogger('discord.client').addFilter(LoggingFilter())
+
 log = logging.getLogger(__name__)
 
 with open('config.json', 'r') as f:
     botsettings = json.load(f)
 
     operatingSys = sys.platform
-    print("USING OPERATING SYS: " + operatingSys)
+    log.info("USING OPERATING SYS: " + operatingSys)
 
     dev_server_id = botsettings["dev_server_id"]
     webhook_id = botsettings["webhook_id"]
@@ -41,6 +62,17 @@ bot = commands.Bot(command_prefix=[prefix], description="A discord bot!", owner_
                                                             replied_user=False),
                    intents=discord.Intents.all(), help_command=None)
 tree = bot.tree  # app_commands.CommandTree(bot)
+bot.dev_server_id = dev_server_id
+
+with open('stats.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+    bot.commands_used = data["commands_used"]  # load command usage
+    f.close()
+
+with open('guild_settings.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+    bot.guild_settings = data  # load guild settings
+    f.close()
 
 
 # Interactions - GLOBAL
@@ -65,9 +97,15 @@ async def globalReportCommand(interaction: discord.Interaction, member: discord.
 
 
 # Help command
-@tree.command(name='help', description='Information on commands & bot setup')
+@tree.command(name='help', description='Information on commands & bot setup.')
 async def globalHelpCommand(interaction: discord.Interaction):
     await bot.get_cog("InteractionsCog").handleHelpCommand(interaction)
+
+
+# settings command
+@tree.command(name='settings', description='Configure how the bot works in your server.')
+async def globalSettingsCommand(interaction: discord.Interaction):
+    await bot.get_cog("InteractionsCog").handleSettingsCommand(interaction)
 
 
 # Interactions - dev server
@@ -97,6 +135,13 @@ async def devReportCommand(interaction: discord.Interaction, member: discord.Use
               guild=discord.Object(id=dev_server_id))
 async def devHelpCommand(interaction: discord.Interaction):
     await bot.get_cog("InteractionsCog").handleHelpCommand(interaction)
+
+
+# settings command
+@tree.command(name='devsettings', description='Configure how Coffee Bot is setup in your server.',
+              guild=discord.Object(id=dev_server_id))
+async def devSettingsCommand(interaction: discord.Interaction):
+    await bot.get_cog("InteractionsCog").handleSettingsCommand(interaction)
 
 
 # Events
@@ -132,19 +177,29 @@ async def on_command_error(ctx, error):
 
 
 # Load extensions
-initial_extensions = (
-    'cogs.owner',
-    'cogs.interactions',
-    'cogs.events',
-    'cogs.tasks'
-)
+# initial_extensions = (
+#     'cogs.owner',
+#     'cogs.interactions',
+#     'cogs.events',
+#     'cogs.tasks'
+# )
 
-for extension in initial_extensions:
-    try:
-        bot.load_extension(extension)
-    except Exception as e:
-        print(f'Failed to load extension {extension}.', file=sys.stderr)
-        traceback.print_exc()
+
+# for extension in initial_extensions:
+#     try:
+#         bot.load_extension(extension)
+#     except Exception as e:
+#         print(f'Failed to load extension {extension}.', file=sys.stderr)
+#         traceback.print_exc()
 
 # Start bot
+# if __name__ == '__main__':
+for file in Path('cogs').glob('**/*.py'):
+    *filetree, _ = file.parts
+    try:
+        bot.load_extension(f"{'.'.join(filetree)}.{file.stem}")
+    except Exception as e:
+        print(f'Failed to load extension {file}.', file=sys.stderr)
+        traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+
 bot.run(token)
