@@ -1,11 +1,14 @@
+import json
 import logging
 import os
+import sys
 import traceback
+from pathlib import Path
 
 import discord
 from discord.ext import commands
 
-from bot import dev_server_id
+# from bot import dev_server_id
 
 log = logging.getLogger(__name__)
 
@@ -13,10 +16,6 @@ log = logging.getLogger(__name__)
 class OwnerCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    @commands.Cog.listener()
-    async def on_ready(self):
-        log.info("loaded")
 
     @commands.is_owner()
     @commands.command()
@@ -101,10 +100,48 @@ class OwnerCog(commands.Cog):
             await ctx.send(f"\U0000274c {e}")
 
     @commands.is_owner()
+    @commands.command(aliases=["rall"])
+    async def reloadall(self, ctx):
+        msg = ""
+        for file in Path('cogs').glob('**/*.py'):
+            *tree, _ = file.parts
+            try:
+                self.bot.reload_extension(f"{'.'.join(tree)}.{file.stem}")
+                msg += f"\U00002705 Successfully reloaded {file}!\n"
+
+            except Exception as e:
+                print(f'Failed to reload extension {file}.', file=sys.stderr)
+                msg += f"\U0000274c Failed to reload {file} with reason: {e}\n"
+                traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+
+        await ctx.send(msg)
+
+    @commands.is_owner()
+    @commands.command()
+    async def dump(self, ctx):
+
+        # save commands used
+        data = {"commands_used": self.bot.commands_used}
+        with open('stats.json', 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+            f.close()
+
+        log.info("[DUMP] Saved commands_used: " + str(self.bot.commands_used))
+
+        # save guild settings
+        with open('guild_settings.json', 'w', encoding='utf-8') as f:
+            json.dump(self.bot.guild_settings, f, ensure_ascii=False, indent=4)
+            f.close()
+
+        log.info("[DUMP] Saved guild_settings: " + str(self.bot.guild_settings))
+
+        await ctx.message.reply("Data saved")
+
+    @commands.is_owner()
     @commands.command()
     async def sync(self, ctx):
         await ctx.send("processing")
-        a = await self.bot.tree.sync(guild=discord.Object(id=dev_server_id))
+        a = await self.bot.tree.sync(guild=discord.Object(id=self.bot.dev_server_id))
         await ctx.message.reply("Dev server interactions synced: " + str(a))
 
     @commands.is_owner()
@@ -139,7 +176,7 @@ class OwnerCog(commands.Cog):
             if guild.unavailable:
                 continue
 
-            total_members += guild.member_count
+            total_members += len(guild.members)
             for channel in guild.channels:
                 if isinstance(channel, discord.TextChannel):
                     text += 1
