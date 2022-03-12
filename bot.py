@@ -105,7 +105,7 @@ async def globalHelpCommand(interaction: discord.Interaction):
 # settings command
 @tree.command(name='settings', description='Configure how the bot works in your server.')
 async def globalSettingsCommand(interaction: discord.Interaction):
-    await bot.get_cog("InteractionsCog").handleSettingsCommand(interaction)
+    await bot.get_cog("SettingsCog").handleSettingsCommand(interaction)
 
 
 # Interactions - dev server
@@ -141,15 +141,20 @@ async def devHelpCommand(interaction: discord.Interaction):
 @tree.command(name='devsettings', description='Configure how Coffee Bot is setup in your server.',
               guild=discord.Object(id=dev_server_id))
 async def devSettingsCommand(interaction: discord.Interaction):
-    await bot.get_cog("InteractionsCog").handleSettingsCommand(interaction)
+    await bot.get_cog("SettingsCog").handleSettingsCommand(interaction)
 
 
 # Events
+
 @bot.event
 async def on_ready():
     log.info('Bot online!')
-    log.info(f'Logged in as {bot.user} (ID: {bot.user.id})')
     log.info(f'Connected to {(len(bot.guilds))} Discord Servers.')
+
+
+@bot.event
+async def setup_hook():
+    log.info(f'Logged in as {bot.user} (ID: {bot.user.id})')
 
     bot.hook = discord.Webhook.partial(webhook_id, webhook_token, session=aiohttp.ClientSession(loop=bot.loop))
 
@@ -176,24 +181,8 @@ async def on_command_error(ctx, error):
         await ctx.send(error)
 
 
-# Load extensions
-# initial_extensions = (
-#     'cogs.owner',
-#     'cogs.interactions',
-#     'cogs.events',
-#     'cogs.tasks'
-# )
+# bot.load_extension('cogs.owner')
 
-
-# for extension in initial_extensions:
-#     try:
-#         bot.load_extension(extension)
-#     except Exception as e:
-#         print(f'Failed to load extension {extension}.', file=sys.stderr)
-#         traceback.print_exc()
-
-# Start bot
-# if __name__ == '__main__':
 for file in Path('cogs').glob('**/*.py'):
     *filetree, _ = file.parts
     try:
