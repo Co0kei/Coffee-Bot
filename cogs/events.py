@@ -41,13 +41,19 @@ class EventCog(commands.Cog):
 
             self.bot.commands_used += 1
 
+            # print(interaction.data)
+
             if type == 1:  # slash command
                 log.info(
                     f'Slash command \'{name}\' ran by {interaction.user}. Commands used: {self.bot.commands_used}!')
 
-            elif type == 3:  # context menu
+            elif type == 2:  # context menu
                 log.info(
-                    f'Context menu command \'{name}\' ran by {interaction.user}. Commands used: {self.bot.commands_used}!')
+                    f'User context menu command \'{name}\' ran by {interaction.user}. Commands used: {self.bot.commands_used}!')
+
+            elif type == 3:  # message context menu
+                log.info(
+                    f'Message context menu command \'{name}\' ran by {interaction.user}. Commands used: {self.bot.commands_used}!')
 
             else:  # idk
                 log.info(
