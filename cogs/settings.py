@@ -19,7 +19,7 @@ class SettingsCog(commands.Cog):
 
         channel = None
         for textChannel in guild.text_channels:
-            if textChannel.name == reportsChannel.lower() or textChannel.id == reportsChannel.lower():
+            if textChannel.name == reportsChannel.lower() or str(textChannel.id) == reportsChannel:
                 channel = textChannel
                 break
 
@@ -31,8 +31,7 @@ class SettingsCog(commands.Cog):
 
         roleFound = None
         for guild_role in guild.roles:
-            # print(f'{guild_role.name} {guild_role.id} {role.lower()}')
-            if guild_role.name.lower() == role.lower() or guild_role.id == role.lower():
+            if guild_role.name.lower() == role.lower() or str(guild_role.id) == role:
                 roleFound = guild_role
                 break
 
@@ -111,7 +110,7 @@ class SettingsCog(commands.Cog):
         if "Administrator" in allowed or "Manage Guild" in allowed:
             pass
         else:
-            await interaction.response.send_message("You must have the manage server permissions to use this.",
+            await interaction.response.send_message("You must have the manage server permission to use this.",
                                                     ephemeral=True)
             return
 
