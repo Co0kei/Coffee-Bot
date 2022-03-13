@@ -3,13 +3,11 @@ import logging
 import sys
 import traceback
 from pathlib import Path
+from typing import Optional
 
 import aiohttp
 import discord
 from discord.ext import commands
-
-# if __name__ != '__main__':
-#     print("Retunring an name is not main")
 
 # Setup logging
 logging.basicConfig(
@@ -20,13 +18,13 @@ logging.basicConfig(
 
 class LoggingFilter(logging.Filter):
     def filter(self, record):
-        # print(record.getMessage())
         if record.getMessage().startswith('Shard ID None has sent the RESUME payload.') \
                 or record.getMessage().startswith('Shard ID None has successfully RESUMED session') \
                 or record.getMessage().startswith('Shard ID None has sent the IDENTIFY payload.') \
                 or record.getMessage().startswith('Shard ID None has connected to Gateway: ["') \
                 or record.getMessage().startswith('logging in using static token') \
-                or record.getMessage().startswith('PyNaCl is not installed, voice will NOT be supported'):
+                or record.getMessage().startswith('PyNaCl is not installed, voice will NOT be supported') \
+                or record.getMessage().startswith('Got a request to RESUME the websocket.'):
             return False  # dont log it
         return True
 
@@ -86,14 +84,16 @@ async def globalReportMessage(interaction: discord.Interaction, message: discord
 # Report User
 @tree.context_menu(name='Report User')
 async def globalReportUser(interaction: discord.Interaction, member: discord.Member):
-    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member)
+    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member, None)
 
 
 # Reports command
 @tree.command(name='report', description='Report a member with a reason for staff to see.')
 @discord.app_commands.describe(member='The member you are reporting.')
-async def globalReportCommand(interaction: discord.Interaction, member: discord.User):
-    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member)
+@discord.app_commands.describe(image='You can upload an image for staff to see if you wish.')
+async def globalReportCommand(interaction: discord.Interaction, member: discord.User,
+                              image: Optional[discord.Attachment] = None):
+    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member, image)
 
 
 # Help command
@@ -119,15 +119,17 @@ async def devReportMessage(interaction: discord.Interaction, message: discord.Me
 # Report User
 @tree.context_menu(name='Dev - Report User', guild=discord.Object(id=dev_server_id))
 async def devReportUser(interaction: discord.Interaction, member: discord.Member):
-    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member)
+    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member, None)
 
 
 # Reports command
 @tree.command(name='devreport', description='Report a member with a reason for staff to see.',
               guild=discord.Object(id=dev_server_id))
 @discord.app_commands.describe(member='The member you are reporting.')
-async def devReportCommand(interaction: discord.Interaction, member: discord.User):
-    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member)
+@discord.app_commands.describe(image='You can upload an image for staff to see if you wish.')
+async def devReportCommand(interaction: discord.Interaction, member: discord.User,
+                           image: Optional[discord.Attachment] = None):
+    await bot.get_cog("InteractionsCog").handleUserReport(interaction, member, image)
 
 
 # Help command
@@ -140,6 +142,7 @@ async def devHelpCommand(interaction: discord.Interaction):
 # settings command
 @tree.command(name='devsettings', description='Configure how Coffee Bot is setup in your server.',
               guild=discord.Object(id=dev_server_id))
+# @commands.has_permissions()
 async def devSettingsCommand(interaction: discord.Interaction):
     await bot.get_cog("SettingsCog").handleSettingsCommand(interaction)
 
@@ -181,8 +184,6 @@ async def on_command_error(ctx, error):
         await ctx.send(error)
 
 
-# bot.load_extension('cogs.owner')
-
 for file in Path('cogs').glob('**/*.py'):
     *filetree, _ = file.parts
     try:
@@ -191,4 +192,5 @@ for file in Path('cogs').glob('**/*.py'):
         print(f'Failed to load extension {file}.', file=sys.stderr)
         traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
 
-bot.run(token)
+if __name__ == '__main__':
+    bot.run(token)
