@@ -86,9 +86,8 @@ class SettingsCog(commands.Cog):
         embed.add_field(name="Reports Banned Role",
                         value=f"Would you like a role that prevents members with it from creating reports?\nValue: {reports_banned_role_id}",
                         inline=False)
+        embed.colour = discord.Colour(0x2F3136)
 
-        # f'Allow members to report bots or messages from bots? yes\n'
-        # f'Allow members to report server admins or messages from admins? yes')
         return embed
 
     async def handleSettingsCommand(self, interaction: discord.Interaction):
@@ -100,16 +99,7 @@ class SettingsCog(commands.Cog):
         # check permissions is admin or manage server
         member = interaction.guild.get_member(interaction.user.id)
 
-        permissions = [
-            (name.replace('_', ' ').title(), value)
-            for name, value in member.guild_permissions
-        ]
-
-        allowed = [name for name, value in permissions if value]
-
-        if "Administrator" in allowed or "Manage Guild" in allowed:
-            pass
-        else:
+        if not member.guild_permissions.administrator and not member.guild_permissions.manage_guild:
             await interaction.response.send_message("You must have the manage server permission to use this.",
                                                     ephemeral=True)
             return
