@@ -13,8 +13,12 @@ class TaskCog(commands.Cog):
     async def cog_load(self):
         self.updater.start()
 
+    # self.update_topdotgg_stats.start()
+
     async def cog_unload(self):
         self.updater.cancel()
+
+    # self.update_topdotgg_stats.stop()
 
     @tasks.loop(minutes=1.0)
     async def updater(self):
@@ -36,6 +40,15 @@ class TaskCog(commands.Cog):
     @updater.before_loop
     async def before_updater(self):
         await self.bot.wait_until_ready()
+
+    # @tasks.loop(minutes=30)
+    # async def update_topdotgg_stats(self):
+    #     """This function runs every 30 minutes to automatically update the server count."""
+    #     try:
+    #         await self.bot.topggpy.post_guild_count()
+    #         print(f"Posted server count ({self.bot.topggpy.guild_count})")
+    #     except Exception as e:
+    #         print(f"Failed to post server count\n{e.__class__.__name__}: {e}")
 
 
 async def setup(bot):

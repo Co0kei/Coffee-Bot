@@ -36,28 +36,67 @@ class EventCog(commands.Cog):
     async def on_interaction(self, interaction: discord.Interaction):
         if interaction.type == discord.InteractionType.application_command:  # slash commands or context menus
 
-            type = interaction.data['type']
-            name = interaction.data['name']
+            command_type = interaction.data['type']
+            command_name = interaction.data['name']
+            user = f'{interaction.user} (ID: {interaction.user.id})'
+
+            if interaction.guild is None:
+                guild = None
+            else:
+                guild = f'{interaction.guild.name} (ID: {interaction.guild.id})'
 
             self.bot.commands_used += 1
 
-            # print(interaction.data)
+            if command_type == 1:  # slash command
+                application_command_type = "Slash"
 
-            if type == 1:  # slash command
-                log.info(
-                    f'Slash command \'{name}\' ran by {interaction.user}. Commands used: {self.bot.commands_used}!')
+            elif command_type == 2:  # user context menu
+                application_command_type = "User Context Menu"
 
-            elif type == 2:  # context menu
-                log.info(
-                    f'User context menu command \'{name}\' ran by {interaction.user}. Commands used: {self.bot.commands_used}!')
-
-            elif type == 3:  # message context menu
-                log.info(
-                    f'Message context menu command \'{name}\' ran by {interaction.user}. Commands used: {self.bot.commands_used}!')
+            elif command_type == 3:  # message context menu
+                application_command_type = "Message Context Menu"
 
             else:  # idk
-                log.info(
-                    f'Unknown type command \'{name}\' ran by {interaction.user}. Commands used: {self.bot.commands_used}!')
+                application_command_type = "Unknown type"
+
+            log.info(
+                f'{application_command_type} command \'{command_name}\' ran by {user}. Guild: {guild}. Commands used: {self.bot.commands_used}!')
+
+            embed = discord.Embed(colour=discord.Colour.blurple())
+            embed.set_author(name=f'Command ran by {user}', icon_url=interaction.user.display_avatar.url)
+            embed.add_field(name='Type', value=f'{application_command_type}', inline=False)
+            embed.add_field(name='Command Name', value=f'{command_name}', inline=False)
+            embed.add_field(name='Guild', value=f'{guild}', inline=False)
+            embed.timestamp = discord.utils.utcnow()
+            embed.set_footer(text=f"Total commands ran: {self.bot.commands_used}")
+
+            await self.bot.hook.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_autopost_success(self):
+        print(f"Posted server count ({self.bot.topggpy.guild_count}), shard count ({self.bot.shard_count})")
+
+    @commands.Cog.listener()
+    async def on_dbl_vote(self, data):
+        """An event that is called whenever someone votes for the bot on Top.gg."""
+
+        discordID = data["user"]
+        user = self.bot.get_user(int(discordID))
+        if user is not None:
+            try:
+                await user.send("Thank you very much for voting for me! :hugging:")
+            except discord.HTTPException:
+                pass
+
+        if data["type"] == "test":
+            return self.bot.dispatch("dbl_test", data)
+
+        print(f"Received a vote:\n{data}")
+
+    @commands.Cog.listener()
+    async def on_dbl_test(self, data):
+        """An event that is called whenever someone tests the webhook system for your bot on Top.gg."""
+        print(f"Received a test vote:\n{data}")
 
 
 async def setup(bot):

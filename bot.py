@@ -7,6 +7,7 @@ from typing import Optional
 
 import aiohttp
 import discord
+import topgg
 from discord.ext import commands
 
 # Setup logging
@@ -24,7 +25,8 @@ class LoggingFilter(logging.Filter):
                 or record.getMessage().startswith('Shard ID None has connected to Gateway: ["') \
                 or record.getMessage().startswith('logging in using static token') \
                 or record.getMessage().startswith('PyNaCl is not installed, voice will NOT be supported') \
-                or record.getMessage().startswith('Got a request to RESUME the websocket.'):
+                or record.getMessage().startswith('Got a request to RESUME the websocket.') \
+                or record.getMessage().startswith('Websocket closed'):
             return False  # dont log it
         return True
 
@@ -44,6 +46,11 @@ with open('config.json', 'r') as f:
     webhook_id = botsettings["webhook_id"]
     webhook_token = botsettings["webhook_token"]
 
+    topgg_token = botsettings["topgg_token"]
+    topgg_url = botsettings["topgg_url"]
+    topgg_password = botsettings["topgg_password"]
+    topgg_port = botsettings["topgg_port"]
+
     if sys.platform == "win32":
         token = botsettings["dev_bot_token"]  # development bot
         prefix = botsettings["dev_prefix"]
@@ -59,7 +66,7 @@ bot = commands.Bot(command_prefix=[prefix], description="A discord bot!", owner_
                    allowed_mentions=discord.AllowedMentions(roles=False, everyone=False, users=True,
                                                             replied_user=False),
                    intents=discord.Intents.all(), help_command=None)
-tree = bot.tree  # app_commands.CommandTree(bot)
+tree = bot.tree
 bot.dev_server_id = dev_server_id
 
 with open('stats.json', 'r', encoding='utf-8') as f:
@@ -174,6 +181,12 @@ async def setup_hook():
     bot.hook = discord.Webhook.partial(webhook_id, webhook_token, session=aiohttp.ClientSession(loop=bot.loop))
 
     bot.uptime = discord.utils.utcnow()
+
+    if sys.platform != "win32":
+        # topgg stuff - only run if on productions bot
+        bot.topggpy = topgg.DBLClient(bot, topgg_token, autopost=True, post_shard_count=True)
+        bot.topgg_webhook = topgg.WebhookManager(bot).dbl_webhook(topgg_url, topgg_password)
+        await bot.topgg_webhook.run(topgg_port)
 
     for file in Path('cogs').glob('**/*.py'):
         *filetree, _ = file.parts
