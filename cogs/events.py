@@ -60,5 +60,5 @@ class EventCog(commands.Cog):
                     f'Unknown type command \'{name}\' ran by {interaction.user}. Commands used: {self.bot.commands_used}!')
 
 
-def setup(bot):
-    bot.add_cog(EventCog(bot))
+async def setup(bot):
+    await bot.add_cog(EventCog(bot))

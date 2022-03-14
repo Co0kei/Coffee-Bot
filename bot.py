@@ -163,6 +163,14 @@ async def setup_hook():
 
     bot.uptime = discord.utils.utcnow()
 
+    for file in Path('cogs').glob('**/*.py'):
+        *filetree, _ = file.parts
+        try:
+            await bot.load_extension(f"{'.'.join(filetree)}.{file.stem}")
+        except Exception as e:
+            print(f'Failed to load extension {file}.', file=sys.stderr)
+            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -183,14 +191,6 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.ArgumentParsingError):
         await ctx.send(error)
 
-
-for file in Path('cogs').glob('**/*.py'):
-    *filetree, _ = file.parts
-    try:
-        bot.load_extension(f"{'.'.join(filetree)}.{file.stem}")
-    except Exception as e:
-        print(f'Failed to load extension {file}.', file=sys.stderr)
-        traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
 
 if __name__ == '__main__':
     bot.run(token)

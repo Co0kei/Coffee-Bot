@@ -38,12 +38,12 @@ class OwnerCog(commands.Cog):
         for filename in os.listdir('./cogs'):
             if filename.endswith('.py'):
                 try:
-                    self.bot.load_extension(f'cogs.{filename[:-3]}')
+                    await self.bot.load_extension(f'cogs.{filename[:-3]}')
                 except commands.ExtensionAlreadyLoaded:
                     cogs_data += f"<:online:821068743987429438> {filename}\n"
                     # loaded
                 else:
-                    self.bot.unload_extension(f'cogs.{filename[:-3]}')
+                    await self.bot.unload_extension(f'cogs.{filename[:-3]}')
                     cogs_data += f"<:offline:821068938036379679> {filename}\n"
                     # unloaded
 
@@ -58,7 +58,7 @@ class OwnerCog(commands.Cog):
             await ctx.send(f"\U0000274c Enter a cog to load!")
             return
         try:
-            self.bot.load_extension(f'cogs.{module}')
+            await self.bot.load_extension(f'cogs.{module}')
             await ctx.send(f"\U00002705 Cog {module} loaded successfully!")
 
         except commands.ExtensionAlreadyLoaded:
@@ -79,7 +79,7 @@ class OwnerCog(commands.Cog):
             await ctx.send(f"\U0000274c Enter a cog to unload!")
             return
         try:
-            self.bot.unload_extension(f'cogs.{module}')
+            await self.bot.unload_extension(f'cogs.{module}')
             await ctx.send(f"\U00002705 Cog {module} unloaded successfully!")
 
         except commands.ExtensionNotLoaded:
@@ -100,7 +100,7 @@ class OwnerCog(commands.Cog):
             await ctx.send(f"\U0000274c Enter a cog to reload!")
             return
         try:
-            self.bot.reload_extension(f"cogs.{module}")
+            await self.bot.reload_extension(f"cogs.{module}")
             await ctx.send(f"\U00002705 Successfully reloaded {module}!")
 
         except commands.ExtensionNotFound:
@@ -117,7 +117,7 @@ class OwnerCog(commands.Cog):
         for file in Path('cogs').glob('**/*.py'):
             *tree, _ = file.parts
             try:
-                self.bot.reload_extension(f"{'.'.join(tree)}.{file.stem}")
+                await self.bot.reload_extension(f"{'.'.join(tree)}.{file.stem}")
                 msg += f"\U00002705 Successfully reloaded {file}!\n"
 
             except Exception as e:
@@ -218,16 +218,16 @@ class OwnerCog(commands.Cog):
                 self._last_result = ret
                 await ctx.send(f'```py\n{value}{ret}\n```')
 
-    def format_dt(self, dt, style=None):
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
-
-        if style is None:
-            return f'<t:{int(dt.timestamp())}>'
-        return f'<t:{int(dt.timestamp())}:{style}>'
-
-    def format_relative(self, dt):
-        return self.format_dt(dt, 'R')
+    # def format_dt(self, dt, style=None):
+    #     if dt.tzinfo is None:
+    #         dt = dt.replace(tzinfo=datetime.timezone.utc)
+    #
+    #     if style is None:
+    #         return f'<t:{int(dt.timestamp())}>'
+    #     return f'<t:{int(dt.timestamp())}:{style}>'
+    #
+    # def format_relative(self, dt):
+    #     return self.format_dt(dt, 'R')
 
     def format_commit(self, commit):
         short, _, _ = commit.message.partition('\n')
@@ -235,10 +235,10 @@ class OwnerCog(commands.Cog):
         commit_tz = datetime.timezone(datetime.timedelta(minutes=commit.commit_time_offset))
         commit_time = datetime.datetime.fromtimestamp(commit.commit_time).astimezone(commit_tz)
 
-        offset = self.format_relative(commit_time.astimezone(datetime.timezone.utc))
+        offset = discord.utils.format_dt(commit_time, style='R')
         return f'[`{short_sha2}`](https://github.com/Co0kei/Coffee-Bot/commit/{commit.hex}) {short} ({offset})'
 
-    def get_last_commits(self, count=4):
+    def get_last_commits(self, count=5):
         repo = pygit2.Repository('.git')
         commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.GIT_SORT_TOPOLOGICAL), count))
         return '\n'.join(self.format_commit(c) for c in commits)
@@ -388,5 +388,5 @@ class OwnerCog(commands.Cog):
         await ctx.send(embed=embed)
 
 
-def setup(bot):
-    bot.add_cog(OwnerCog(bot))
+async def setup(bot):
+    await bot.add_cog(OwnerCog(bot))

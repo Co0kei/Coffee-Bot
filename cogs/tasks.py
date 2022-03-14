@@ -9,11 +9,12 @@ log = logging.getLogger(__name__)
 class TaskCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    async def cog_load(self):
         self.updater.start()
 
-    def cog_unload(self):
-        if self.updater.is_running():
-            self.updater.cancel()
+    async def cog_unload(self):
+        self.updater.cancel()
 
     @tasks.loop(minutes=1.0)
     async def updater(self):
@@ -37,5 +38,5 @@ class TaskCog(commands.Cog):
         await self.bot.wait_until_ready()
 
 
-def setup(bot):
-    bot.add_cog(TaskCog(bot))
+async def setup(bot):
+    await bot.add_cog(TaskCog(bot))

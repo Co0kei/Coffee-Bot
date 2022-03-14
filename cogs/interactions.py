@@ -306,5 +306,5 @@ class InteractionsCog(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=False)
 
 
-def setup(bot):
-    bot.add_cog(InteractionsCog(bot))
+async def setup(bot):
+    await bot.add_cog(InteractionsCog(bot))
