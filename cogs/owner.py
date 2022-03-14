@@ -172,6 +172,17 @@ class OwnerCog(commands.Cog):
         return content.strip('` \n')
 
     @commands.is_owner()
+    @commands.command()
+    async def clonerepo(self, ctx):
+
+        current_working_directory = os.getcwd()
+        repository_path = pygit2.discover_repository(current_working_directory)
+        repo = pygit2.Repository(repository_path)
+
+        repo = pygit2.clone_repository("https://github.com/Co0kei/Coffee-Bot", ".git")
+        await ctx.send(repo)
+
+    @commands.is_owner()
     @commands.command(name="eval")
     async def _eval(self, ctx, *, body: str):
         """Evaluates code"""
