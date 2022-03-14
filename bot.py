@@ -96,16 +96,22 @@ async def globalReportCommand(interaction: discord.Interaction, member: discord.
     await bot.get_cog("InteractionsCog").handleUserReport(interaction, member, image)
 
 
-# Help command
-@tree.command(name='help', description='Information on commands & bot setup.')
-async def globalHelpCommand(interaction: discord.Interaction):
-    await bot.get_cog("InteractionsCog").handleHelpCommand(interaction)
-
-
 # settings command
 @tree.command(name='settings', description='Configure how the bot works in your server.')
 async def globalSettingsCommand(interaction: discord.Interaction):
     await bot.get_cog("SettingsCog").handleSettingsCommand(interaction)
+
+
+# Help command
+@tree.command(name='help', description='Information on commands & bot setup.')
+async def globalHelpCommand(interaction: discord.Interaction):
+    await bot.get_cog("CommandsCog").handleHelpCommand(interaction)
+
+
+# about command
+@tree.command(name='about', description='Shows statistics about the bot itself.')
+async def globalAboutCommand(interaction: discord.Interaction):
+    await bot.get_cog("CommandsCog").handleAboutCommand(interaction)
 
 
 # Interactions - dev server
@@ -132,27 +138,33 @@ async def devReportCommand(interaction: discord.Interaction, member: discord.Use
     await bot.get_cog("InteractionsCog").handleUserReport(interaction, member, image)
 
 
-# Help command
-@tree.command(name='devhelp', description='Information on commands & bot setup',
-              guild=discord.Object(id=dev_server_id))
-async def devHelpCommand(interaction: discord.Interaction):
-    await bot.get_cog("InteractionsCog").handleHelpCommand(interaction)
-
-
 # settings command
 @tree.command(name='devsettings', description='Configure how Coffee Bot is setup in your server.',
               guild=discord.Object(id=dev_server_id))
-# @commands.has_permissions()
 async def devSettingsCommand(interaction: discord.Interaction):
     await bot.get_cog("SettingsCog").handleSettingsCommand(interaction)
+
+
+# Help command
+@tree.command(name='devhelp', description='Information on commands & bot setup.',
+              guild=discord.Object(id=dev_server_id))
+async def devHelpCommand(interaction: discord.Interaction):
+    await bot.get_cog("CommandsCog").handleHelpCommand(interaction)
+
+
+# about command
+@tree.command(name='devabout', description='Shows statistics about the bot itself.',
+              guild=discord.Object(id=dev_server_id))
+async def devAboutCommand(interaction: discord.Interaction):
+    await bot.get_cog("CommandsCog").handleAboutCommand(interaction)
 
 
 # Events
 
 @bot.event
 async def on_ready():
-    log.info('Bot online!')
     log.info(f'Connected to {(len(bot.guilds))} Discord Servers.')
+    log.info('Bot online!')
 
 
 @bot.event
