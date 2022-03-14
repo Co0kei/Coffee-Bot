@@ -238,7 +238,7 @@ class OwnerCog(commands.Cog):
         offset = discord.utils.format_dt(commit_time, style='R')
         return f'[`{short_sha2}`](https://github.com/Co0kei/Coffee-Bot/commit/{commit.hex}) {short} ({offset})'
 
-    def get_last_commits(self, count=5):
+    def get_last_commits(self, count=6):
         repo = pygit2.Repository('.git')
         commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.GIT_SORT_TOPOLOGICAL), count))
         return '\n'.join(self.format_commit(c) for c in commits)
