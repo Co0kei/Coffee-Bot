@@ -145,8 +145,11 @@ class InteractionsCog(commands.Cog):
             else:
                 content = None
 
+            view = discord.ui.View()
+            view.add_item(discord.ui.Button(label="Jump to message", url=self.message.jump_url))
+
             await self.interactionsCog.getReportsChannel(interaction.guild).send(
-                content=content, embed=embed,
+                content=content, embed=embed, view=view,
                 allowed_mentions=discord.AllowedMentions(roles=True))
 
     # User reports
@@ -278,32 +281,6 @@ class InteractionsCog(commands.Cog):
             # await finalMsg.reply(
             #     content=f"Total Messages from {self.member.name} in {interaction.guild.name} in the last 7 days: `{counter}`",
             #     file=file)
-
-    async def handleHelpCommand(self, interaction: discord.Interaction):
-
-        embed = discord.Embed()  # title="Help", description=f'Support server: https://discord.gg/rcUzqaQN8k')
-
-        embed.title = 'Official Bot Server Invite'
-        embed.url = 'https://discord.gg/rcUzqaQN8k'
-        embed.colour = discord.Colour.blurple()
-
-        embed.add_field(name="__Commands__", value=
-        f'**/help** - Displays help menu.\n'
-        f'**Report Message** - Right click a message, scroll to \'Apps\', then click me to report a user.\n'
-        f'**Report User** - Right click a user, scroll to \'Apps\', then click me to report a message.\n'
-        f'**/report** - Used to report a user, as mobile devices do not support context menus.\n'
-        f'**/settings** - Used to setup the bot in your server.\n'
-        f'**-about** - Some stats about the bot.', inline=False
-                        )
-
-        embed.add_field(name="__Setup__", value=
-        f'1. First invite me to your server, using the button on my profile.\n'
-        f'2. Use the /settings command and enter a channel name for reports to be sent to.\n'
-        f'3. Now you can right click on a user or message then scroll to \'Apps\' and click the report button!\n'
-        f'\n'
-        f'**NOTE:** Members must have the \'Use Application Commands\' permission. Also Discord is sometimes weird so if no \'Apps\' section is showing after you right click a message or user, then do CTRL + R to reload your Discord',
-                        inline=False)
-        await interaction.response.send_message(embed=embed, ephemeral=False)
 
 
 async def setup(bot):

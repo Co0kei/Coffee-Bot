@@ -1,6 +1,4 @@
-import datetime
 import io
-import itertools
 import json
 import logging
 import os
@@ -12,13 +10,8 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 import discord
-import pkg_resources
-import psutil
 import pygit2
-from dateutil.relativedelta import relativedelta
 from discord.ext import commands
-
-# from bot import dev_server_id
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +20,6 @@ class OwnerCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._last_result = None
-        self.process = psutil.Process()
 
     @commands.is_owner()
     @commands.command()
@@ -151,17 +143,44 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.command()
-    async def sync(self, ctx):
-        await ctx.send("processing")
+    async def syncdev(self, ctx):
+        await ctx.send("Processing")
         a = await self.bot.tree.sync(guild=discord.Object(id=self.bot.dev_server_id))
-        await ctx.message.reply("Dev server interactions synced: " + str(a))
+        # print(self.bot.tree)
+        # print(ctx.guild.id)
+        # a = await self.bot.tree.copy_global_to(guild=discord.Object(ctx.guild.id))
+
+        await ctx.message.reply("Server interactions synced: " + str(a))
+
+    # @commands.is_owner()
+    # @commands.command()
+    # async def removelocal(self, ctx, guild=None):
+    #     await ctx.send("Processing")
+    #
+    #     for command in self.bot.tree.get_commands(guild=discord.Object(guild or ctx.guild.id)):
+    #         self.bot.tree.remove_command(command.name, guild=discord.Object(guild or ctx.guild.id))
+    #
+    #     await ctx.message.reply("Server interactions removed")
 
     @commands.is_owner()
     @commands.command()
-    async def globalsync(self, ctx):
+    async def syncglobal(self, ctx):
         await ctx.send("processing global sync")
         a = await self.bot.tree.sync()
         await ctx.message.reply("Global interaction sync done: " + str(a))
+
+    @commands.is_owner()
+    @commands.command(name="clonerepo")
+    async def forceRefreshGithub(self, ctx):
+        if sys.platform == "win32":
+            await ctx.send("dont need to")
+            return
+        try:
+            shutil.rmtree(".git")
+        except:
+            pass
+        repo = pygit2.clone_repository("https://github.com/Co0kei/Coffee-Bot", ".git", bare=True)
+        await ctx.send(repo)
 
     def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
@@ -171,16 +190,6 @@ class OwnerCog(commands.Cog):
 
         # remove `foo`
         return content.strip('` \n')
-
-    @commands.is_owner()
-    @commands.command()
-    async def clonerepo(self, ctx):
-        try:
-            shutil.rmtree(".git")
-        except:
-            pass
-        repo = pygit2.clone_repository("https://github.com/Co0kei/Coffee-Bot", ".git", bare=True)
-        await ctx.send(repo)
 
     @commands.is_owner()
     @commands.command(name="eval")
@@ -228,175 +237,6 @@ class OwnerCog(commands.Cog):
             else:
                 self._last_result = ret
                 await ctx.send(f'```py\n{value}{ret}\n```')
-
-    # def format_dt(self, dt, style=None):
-    #     if dt.tzinfo is None:
-    #         dt = dt.replace(tzinfo=datetime.timezone.utc)
-    #
-    #     if style is None:
-    #         return f'<t:{int(dt.timestamp())}>'
-    #     return f'<t:{int(dt.timestamp())}:{style}>'
-    #
-    # def format_relative(self, dt):
-    #     return self.format_dt(dt, 'R')
-
-    def format_commit(self, commit):
-        short, _, _ = commit.message.partition('\n')
-        short_sha2 = commit.hex[0:6]
-        commit_tz = datetime.timezone(datetime.timedelta(minutes=commit.commit_time_offset))
-        commit_time = datetime.datetime.fromtimestamp(commit.commit_time).astimezone(commit_tz)
-
-        offset = discord.utils.format_dt(commit_time, style='R')
-        return f'[`{short_sha2}`](https://github.com/Co0kei/Coffee-Bot/commit/{commit.hex}) {short} ({offset})'
-
-    def get_last_commits(self, count=6):
-        repo = pygit2.Repository('.git')
-        commits = list(itertools.islice(repo.walk(repo.head.target, pygit2.GIT_SORT_TOPOLOGICAL), count))
-        return '\n'.join(self.format_commit(c) for c in commits)
-
-    def get_bot_uptime(self, *, brief=False):
-        return self.human_timedelta(self.bot.uptime, accuracy=None, brief=brief, suffix=False)
-
-    class plural:
-        def __init__(self, value):
-            self.value = value
-
-        def __format__(self, format_spec):
-            v = self.value
-            singular, sep, plural = format_spec.partition('|')
-            plural = plural or f'{singular}s'
-            if abs(v) != 1:
-                return f'{v} {plural}'
-            return f'{v} {singular}'
-
-    def human_join(self, seq, delim=', ', final='or'):
-        size = len(seq)
-        if size == 0:
-            return ''
-
-        if size == 1:
-            return seq[0]
-
-        if size == 2:
-            return f'{seq[0]} {final} {seq[1]}'
-
-        return delim.join(seq[:-1]) + f' {final} {seq[-1]}'
-
-    def human_timedelta(self, dt, *, source=None, accuracy=3, brief=False, suffix=True):
-        now = source or datetime.datetime.now(datetime.timezone.utc)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
-
-        if now.tzinfo is None:
-            now = now.replace(tzinfo=datetime.timezone.utc)
-
-        # Microsecond free zone
-        now = now.replace(microsecond=0)
-        dt = dt.replace(microsecond=0)
-
-        # This implementation uses relativedelta instead of the much more obvious
-        # divmod approach with seconds because the seconds approach is not entirely
-        # accurate once you go over 1 week in terms of accuracy since you have to
-        # hardcode a month as 30 or 31 days.
-        # A query like "11 months" can be interpreted as "!1 months and 6 days"
-        if dt > now:
-            delta = relativedelta(dt, now)
-            suffix = ''
-        else:
-            delta = relativedelta(now, dt)
-            suffix = ' ago' if suffix else ''
-
-        attrs = [
-            ('year', 'y'),
-            ('month', 'mo'),
-            ('day', 'd'),
-            ('hour', 'h'),
-            ('minute', 'm'),
-            ('second', 's'),
-        ]
-
-        output = []
-        for attr, brief_attr in attrs:
-            elem = getattr(delta, attr + 's')
-            if not elem:
-                continue
-
-            if attr == 'day':
-                weeks = delta.weeks
-                if weeks:
-                    elem -= weeks * 7
-                    if not brief:
-                        output.append(format(self.plural(weeks), 'week'))
-                    else:
-                        output.append(f'{weeks}w')
-
-            if elem <= 0:
-                continue
-
-            if brief:
-                output.append(f'{elem}{brief_attr}')
-            else:
-                output.append(format(self.plural(elem), attr))
-
-        if accuracy is not None:
-            output = output[:accuracy]
-
-        if len(output) == 0:
-            return 'now'
-        else:
-            if not brief:
-                return self.human_join(output, final='and') + suffix
-            else:
-                return ' '.join(output) + suffix
-
-    @commands.command()
-    async def about(self, ctx):
-        """Tells you information about the bot itself """
-        self.bot.commands_used += 1
-
-        revision = self.get_last_commits()
-        embed = discord.Embed(description='Latest Changes:\n' + revision)
-        embed.title = 'Official Bot Server Invite'
-        embed.url = 'https://discord.gg/rcUzqaQN8k'
-        embed.colour = discord.Colour.blurple()
-
-        owner = self.bot.get_user(self.bot.owner_id)
-        embed.set_author(name="Created by " + str(owner), icon_url=owner.display_avatar.url)
-
-        # statistics
-        total_members = 0
-        total_unique = len(self.bot.users)
-
-        text = 0
-        voice = 0
-        guilds = 0
-        for guild in self.bot.guilds:
-            guilds += 1
-            if guild.unavailable:
-                continue
-
-            total_members += len(guild.members)
-            for channel in guild.channels:
-                if isinstance(channel, discord.TextChannel):
-                    text += 1
-                elif isinstance(channel, discord.VoiceChannel):
-                    voice += 1
-
-        embed.add_field(name='Members', value=f'{total_members} total\n{total_unique} unique')
-        embed.add_field(name='Channels', value=f'{text + voice} total\n{text} text\n{voice} voice')
-
-        memory_usage = self.process.memory_full_info().uss / 1024 ** 2
-        cpu_usage = self.process.cpu_percent() / psutil.cpu_count()
-        embed.add_field(name='Process', value=f'{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU')
-
-        version = pkg_resources.get_distribution('discord.py').version
-        embed.add_field(name='Guilds', value=guilds)
-        embed.add_field(name='Commands Run', value=self.bot.commands_used)
-
-        embed.add_field(name='Uptime', value=self.get_bot_uptime(brief=True))
-        embed.set_footer(text=f'Made with discord.py v{version}', icon_url='http://i.imgur.com/5BFecvA.png')
-        embed.timestamp = discord.utils.utcnow()
-        await ctx.send(embed=embed)
 
 
 async def setup(bot):
