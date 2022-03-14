@@ -4,6 +4,7 @@ import itertools
 import json
 import logging
 import os
+import shutil
 import sys
 import textwrap
 import traceback
@@ -174,12 +175,11 @@ class OwnerCog(commands.Cog):
     @commands.is_owner()
     @commands.command()
     async def clonerepo(self, ctx):
-
-        current_working_directory = os.getcwd()
-        repository_path = pygit2.discover_repository(current_working_directory)
-        repo = pygit2.Repository(repository_path)
-
-        repo = pygit2.clone_repository("https://github.com/Co0kei/Coffee-Bot", ".git")
+        try:
+            shutil.rmtree(".git")
+        except:
+            pass
+        repo = pygit2.clone_repository("https://github.com/Co0kei/Coffee-Bot", ".git", bare=True)
         await ctx.send(repo)
 
     @commands.is_owner()
