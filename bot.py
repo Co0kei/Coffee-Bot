@@ -172,6 +172,8 @@ async def devAboutCommand(interaction: discord.Interaction):
 async def on_ready():
     log.info(f'Connected to {(len(bot.guilds))} Discord Servers.')
     log.info('Bot online!')
+    await bot.change_presence(
+        activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(bot.guilds)} guilds'))
 
 
 @bot.event
@@ -187,6 +189,13 @@ async def setup_hook():
         bot.topggpy = topgg.DBLClient(bot, topgg_token, autopost=True, post_shard_count=True)
         bot.topgg_webhook = topgg.WebhookManager(bot).dbl_webhook(topgg_url, topgg_password)
         await bot.topgg_webhook.run(topgg_port)
+
+    # test
+    # bot.topggpy = topgg.DBLClient(bot, topgg_token)
+    # print("1")
+    # users = await bot.topggpy.get_bot_votes()
+    # print("2")
+    # print(users)
 
     for file in Path('cogs').glob('**/*.py'):
         *filetree, _ = file.parts

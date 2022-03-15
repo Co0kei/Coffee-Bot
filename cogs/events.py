@@ -21,6 +21,9 @@ class EventCog(commands.Cog):
 
         await self.bot.hook.send(embed=embed)
 
+        await self.bot.change_presence(
+            activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(self.bot.guilds)} guilds'))
+
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         log.info(f'I have been removed from {guild.name} ({guild.id}) which has {len(guild.members)} members.')
@@ -31,6 +34,9 @@ class EventCog(commands.Cog):
         embed.timestamp = discord.utils.utcnow()
 
         await self.bot.hook.send(embed=embed)
+
+        await self.bot.change_presence(
+            activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(self.bot.guilds)} guilds'))
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
@@ -70,7 +76,8 @@ class EventCog(commands.Cog):
             embed.timestamp = discord.utils.utcnow()
             embed.set_footer(text=f"Total commands ran: {self.bot.commands_used}")
 
-            await self.bot.hook.send(embed=embed)
+            if interaction.user.id != self.bot.owner_id:
+                await self.bot.hook.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_autopost_success(self):
