@@ -1,4 +1,6 @@
 import logging
+import sys
+import traceback
 
 import discord
 from discord.ext import commands
@@ -95,6 +97,11 @@ class EventCog(commands.Cog):
             except discord.HTTPException:
                 pass
 
+        if user is None:
+            await self.bot.hook.send(f'Discord ID: {discordID} just voted for me!')
+        else:
+            await self.bot.hook.send(f'{user.mention} just voted for me!')
+
         if data["type"] == "test":
             return self.bot.dispatch("dbl_test", data)
 
@@ -104,6 +111,22 @@ class EventCog(commands.Cog):
     async def on_dbl_test(self, data):
         """An event that is called whenever someone tests the webhook system for your bot on Top.gg."""
         print(f"Received a test vote:\n{data}")
+
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.NoPrivateMessage):
+            await ctx.author.send('This command cannot be used in private messages.')
+        elif isinstance(error, commands.DisabledCommand):
+            await ctx.author.send('Sorry. This command is disabled and cannot be used.')
+        elif isinstance(error, commands.NotOwner):
+            await ctx.author.send('Sorry. This command can\'t be used by you.')
+
+        elif isinstance(error, commands.CommandInvokeError):
+            original = error.original
+            if not isinstance(original, discord.HTTPException):
+                print(f'Error in {ctx.command.qualified_name}:', file=sys.stderr)
+                traceback.print_tb(original.__traceback__)
+                print(f'{original.__class__.__name__}: {original}', file=sys.stderr)
 
 
 async def setup(bot):

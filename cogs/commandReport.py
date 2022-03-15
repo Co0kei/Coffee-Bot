@@ -1,18 +1,37 @@
 import logging
 from datetime import datetime, timedelta
+from typing import Optional
 
 import discord
-from discord import ui
+from discord import app_commands, ui
 from discord.ext import commands
+
+import dev_server
 
 log = logging.getLogger(__name__)
 
 
-class InteractionsCog(commands.Cog):
-    def __init__(self, bot):
+class ReportCommand(commands.Cog):
+    def __init__(self, bot) -> None:
         self.bot = bot
         self.on_cooldown = {}
 
+    @app_commands.command(name='report', description='Report a member with a reason for staff to see.')
+    @app_commands.describe(member='The member you are reporting.')
+    @app_commands.describe(image='You can upload an image for staff to see if you wish.')
+    async def globalReportCommand(self, interaction: discord.Interaction, member: discord.User,
+                                  image: Optional[discord.Attachment] = None):
+        await self.handleUserReport(interaction, member, image)
+
+    @app_commands.command(name='devreport', description='Dev- Report a member with a reason for staff to see.')
+    @app_commands.guilds(discord.Object(id=dev_server.DEV_SERVER_ID))
+    @discord.app_commands.describe(member='The member you are reporting.')
+    @discord.app_commands.describe(image='You can upload an image for staff to see if you wish.')
+    async def devReportCommand(self, interaction: discord.Interaction, member: discord.User,
+                               image: Optional[discord.Attachment] = None):
+        await self.handleUserReport(interaction, member, image)
+
+    # Methods
     def getReportsChannel(self, guild: discord.Guild) -> discord.TextChannel:
         reportsChannel = None
         if str(guild.id) in self.bot.guild_settings:
@@ -47,7 +66,6 @@ class InteractionsCog(commands.Cog):
         embed.colour = discord.Colour.red()
         return embed
 
-    # lil cooldown manager
     def check_cooldown(self, member: discord.Member) -> int:
         cooldown_end = self.on_cooldown.get(member.id)
 
@@ -56,12 +74,9 @@ class InteractionsCog(commands.Cog):
                 seconds=10)  # Add the datetime of the cooldown's end to the dictionary
             return 0  # allow the command to run
         else:
-            # (cooldown_end - datetime.now()).seconds)  # Otherwise, raise the cooldown error to say the command is on cooldown
-            return (
-                    cooldown_end - datetime.now()).total_seconds()  # raise commands.CommandOnCooldown(commands.BucketType.user, (cooldown_end - datetime.now()).total_seconds())
+            return (cooldown_end - datetime.now()).total_seconds()
 
     # Message reports
-
     async def handleMessageReport(self, interaction: discord.Interaction, message: discord.Message):
 
         if message.guild is None:
@@ -98,7 +113,7 @@ class InteractionsCog(commands.Cog):
         cooldown = self.check_cooldown(interaction.user)
         if cooldown != 0:
             return await interaction.response.send_message(
-                f"Please wait {cooldown:,.2f}s before posting another report!")
+                f"Please wait {cooldown:,.2f}s before posting another report!", ephemeral=True)
 
         await interaction.response.send_modal(self.MessageReportModal(message=message, interactionsCog=self))
 
@@ -180,7 +195,6 @@ class InteractionsCog(commands.Cog):
                 allowed_mentions=discord.AllowedMentions(roles=True))
 
     # User reports
-
     async def handleUserReport(self, interaction: discord.Interaction, member: discord.Member,
                                attachment: discord.Attachment):
 
@@ -217,7 +231,7 @@ class InteractionsCog(commands.Cog):
         cooldown = self.check_cooldown(interaction.user)
         if cooldown != 0:
             return await interaction.response.send_message(
-                f"Please wait {cooldown:,.2f}s before posting another report!")
+                f"Please wait {cooldown:,.2f}s before posting another report!", ephemeral=True)
 
         await interaction.response.send_modal(
             self.UserReportModal(member=member, interactionsCog=self, attachment=attachment))
@@ -316,4 +330,4 @@ class InteractionsCog(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(InteractionsCog(bot))
+    await bot.add_cog(ReportCommand(bot))

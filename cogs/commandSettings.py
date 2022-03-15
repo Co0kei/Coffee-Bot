@@ -1,16 +1,28 @@
 import logging
 
 import discord
-from discord import ui
+from discord import ui, app_commands
 from discord.ext import commands
+
+import dev_server
 
 log = logging.getLogger(__name__)
 
 
-class SettingsCog(commands.Cog):
+class SettingsCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @app_commands.command(name='settings', description='Configure how the bot works in your server.')
+    async def globalSettingsCommand(self, interaction: discord.Interaction):
+        await self.handleSettingsCommand(interaction)
+
+    @app_commands.command(name='devsettings', description='Dev - Configure how Coffee Bot is setup in your server.')
+    @app_commands.guilds(discord.Object(id=dev_server.DEV_SERVER_ID))
+    async def devSettingsCommand(self, interaction: discord.Interaction):
+        await self.handleSettingsCommand(interaction)
+
+    # Methods
     def checkValidChannel(self, reportsChannel: str, guild: discord.Guild) -> discord.TextChannel:
         if reportsChannel.startswith("#"):
             reportsChannel = reportsChannel[1:]
@@ -163,6 +175,11 @@ class SettingsCog(commands.Cog):
             await self.on_timeout()
             self.stop()
 
+        # @discord.ui.button(label='Report Bots', style=discord.ButtonStyle.green, emoji="")
+        # async def finish(self, button: discord.ui.Button, interaction: discord.Interaction):
+        #     await self.on_timeout()
+        #     self.stop()
+
     # MODALS
 
     class ReportsChannelModel(ui.Modal, title="Reports Channel"):
@@ -270,4 +287,4 @@ class SettingsCog(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(SettingsCog(bot))
+    await bot.add_cog(SettingsCommand(bot))
