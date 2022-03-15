@@ -143,6 +143,21 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.command()
+    async def test(self, ctx):
+
+        users = await self.bot.topggpy.get_bot_votes()
+
+        peoplethatvoted = []
+
+        for user in users:
+            username = user["username"]
+            peoplethatvoted.append(username)
+
+        await ctx.send(f'Bot Vote History:\n' + "\n".join(peoplethatvoted))
+        print(users)
+
+    @commands.is_owner()
+    @commands.command()
     async def syncdev(self, ctx):
         await ctx.send("Processing")
         a = await self.bot.tree.sync(guild=discord.Object(id=self.bot.dev_server_id))
