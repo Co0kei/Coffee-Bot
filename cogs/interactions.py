@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 
 import discord
 from discord import ui
@@ -10,6 +11,7 @@ log = logging.getLogger(__name__)
 class InteractionsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.on_cooldown = {}
 
     def getReportsChannel(self, guild: discord.Guild) -> discord.TextChannel:
         reportsChannel = None
@@ -45,7 +47,21 @@ class InteractionsCog(commands.Cog):
         embed.colour = discord.Colour.red()
         return embed
 
+    # lil cooldown manager
+    def check_cooldown(self, member: discord.Member) -> int:
+        cooldown_end = self.on_cooldown.get(member.id)
+
+        if cooldown_end is None or cooldown_end < datetime.now():  # If there's no cooldown or it's over
+            self.on_cooldown[member.id] = datetime.now() + timedelta(
+                seconds=10)  # Add the datetime of the cooldown's end to the dictionary
+            return 0  # allow the command to run
+        else:
+            # (cooldown_end - datetime.now()).seconds)  # Otherwise, raise the cooldown error to say the command is on cooldown
+            return (
+                    cooldown_end - datetime.now()).total_seconds()  # raise commands.CommandOnCooldown(commands.BucketType.user, (cooldown_end - datetime.now()).total_seconds())
+
     # Message reports
+
     async def handleMessageReport(self, interaction: discord.Interaction, message: discord.Message):
 
         if message.guild is None:
@@ -79,6 +95,11 @@ class InteractionsCog(commands.Cog):
                                                     ephemeral=True)
             return
 
+        cooldown = self.check_cooldown(interaction.user)
+        if cooldown != 0:
+            return await interaction.response.send_message(
+                f"Please wait {cooldown:,.2f}s before posting another report!")
+
         await interaction.response.send_modal(self.MessageReportModal(message=message, interactionsCog=self))
 
     class MessageReportModal(ui.Modal, title="Report Message"):
@@ -95,7 +116,7 @@ class InteractionsCog(commands.Cog):
         async def on_submit(self, interaction: discord.Interaction):
             # Send to user
             embed = discord.Embed()
-            embed.set_author(name="Message Reported", icon_url=self.message.author.display_avatar.url)
+            embed.set_author(name="Message Content", icon_url=self.message.author.display_avatar.url)
             embed.colour = discord.Colour(0x2F3136)
 
             if len(str(self.message.clean_content)) == 0:
@@ -103,9 +124,10 @@ class InteractionsCog(commands.Cog):
             else:
                 msgContent = self.message.clean_content[0:2000]
 
-            embedDescription = f"You successfully reported [this]({self.message.jump_url}) message. Staff have been alerted.\n\n" \
-                               f"**Report reason:**\n`{self.reason.value}`" \
-                               f"\n\n**Message reported:**\n`{msgContent}`"
+            embedDescription = f"You successfully reported [this]({self.message.jump_url}) message from {self.message.author.mention} ({self.message.author}). Staff have been alerted.\n\n" \
+                               f"**Message reported:**\n`{msgContent}`" \
+                               f"\n\n**Report reason:**\n`{self.reason.value}`"
+
             if len(self.message.attachments) != 0:
                 attachement1 = self.message.attachments[0]
                 if attachement1.content_type.startswith("image"):
@@ -121,16 +143,21 @@ class InteractionsCog(commands.Cog):
             embed.set_author(name="Message Report Received", icon_url=self.message.author.display_avatar.url)
             embed.colour = discord.Colour(0x2F3136)
 
-            line1 = f'{interaction.user.mention} ({interaction.user}) has reported [this]({self.message.jump_url}) message from {self.message.author.mention} ({self.message.author})'
-            line2 = f"**Report reason:**\n`{self.reason.value}`"
-            if len(str(self.message.clean_content)) == 0:
-                line3 = "**Message reported:**\n`No message content`"
-            else:
-                line3 = f'**Message reported:**\n`{self.message.clean_content[0:2000]}`'  # only display first 2000 chars
+            embedDescription = f'{interaction.user.mention} ({interaction.user}) has reported [this]({self.message.jump_url}) message from {self.message.author.mention} ({self.message.author})\n\n'
 
-            embedDescription = f"{line1}\n" \
-                               f"\n{line2}\n" \
-                               f"\n{line3}"
+            if len(str(self.message.clean_content)) == 0:
+                embedDescription += "**Message Content:**\n`No message content`"
+            else:
+                embedDescription += f'**Message Content:**\n`{self.message.clean_content[0:2000]}`'  # only display first 2000 chars
+
+            embedDescription += f'\n\n**Reported Message\'s Info:**\n' \
+                                f'Message ID: `{self.message.id}`\n' \
+                                f'Channel: {self.message.channel.mention}\n' \
+                                f'Created: {discord.utils.format_dt(self.message.created_at, "F")} ({discord.utils.format_dt(self.message.created_at, "R")})\n' \
+                                f'Attachments: `{len(self.message.attachments)}`\n' \
+                                f'Reactions: `{len(self.message.reactions)}`\n\n'
+
+            embedDescription += f"**Report reason:**\n`{self.reason.value}`"
 
             if len(self.message.attachments) != 0:
                 attachement1 = self.message.attachments[0]
@@ -186,6 +213,11 @@ class InteractionsCog(commands.Cog):
         if member.guild_permissions.administrator:
             await interaction.response.send_message("Sorry, you can't report a server administrator!", ephemeral=True)
             return
+
+        cooldown = self.check_cooldown(interaction.user)
+        if cooldown != 0:
+            return await interaction.response.send_message(
+                f"Please wait {cooldown:,.2f}s before posting another report!")
 
         await interaction.response.send_modal(
             self.UserReportModal(member=member, interactionsCog=self, attachment=attachment))
