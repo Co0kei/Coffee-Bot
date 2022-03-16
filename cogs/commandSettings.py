@@ -49,43 +49,63 @@ class SettingsCommand(commands.Cog):
 
         return roleFound
 
+    def isReportSelfEnabled(self, guild: discord.Guild) -> bool:
+        report_self = True
+
+        if str(guild.id) in self.bot.guild_settings:
+            if "report_self" in self.bot.guild_settings[str(guild.id)]:
+                report_self = self.bot.guild_settings[str(guild.id)]["report_self"]
+        return report_self
+
+    def isReportBotsEnabled(self, guild: discord.Guild) -> bool:
+        report_bots = True
+
+        if str(guild.id) in self.bot.guild_settings:
+            if "report_bots" in self.bot.guild_settings[str(guild.id)]:
+                report_bots = self.bot.guild_settings[str(guild.id)]["report_bots"]
+        return report_bots
+
+    def isReportAdminsEnabled(self, guild: discord.Guild) -> bool:
+        report_admins = True
+
+        if str(guild.id) in self.bot.guild_settings:
+            if "report_admins" in self.bot.guild_settings[str(guild.id)]:
+                report_admins = self.bot.guild_settings[str(guild.id)]["report_admins"]
+        return report_admins
+
     def getSettingsEmbed(self, guild: discord.Guild) -> discord.Embed:
+
+        reports_channel = "`None`"
+        reports_alert_role = "`None`"
+        reports_banned_role_id = "`None`"
+
+        report_self = self.isReportSelfEnabled(guild)
+        report_bots = self.isReportBotsEnabled(guild)
+        report_admins = self.isReportAdminsEnabled(guild)
+
         if str(guild.id) in self.bot.guild_settings:
 
             if "reports_channel_id" in self.bot.guild_settings[str(guild.id)]:
-                reports_channel = guild.get_channel(
-                    self.bot.guild_settings[str(guild.id)]["reports_channel_id"])
+                reports_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["reports_channel_id"])
                 if reports_channel is None:
-                    reports_channel = "None"
+                    reports_channel = "`None`"
                 else:
                     reports_channel = reports_channel.mention
-            else:
-                reports_channel = "None"
 
             if "reports_alert_role_id" in self.bot.guild_settings[str(guild.id)]:
-                reports_alert_role = guild.get_role(
-                    self.bot.guild_settings[str(guild.id)]["reports_alert_role_id"])
+                reports_alert_role = guild.get_role(self.bot.guild_settings[str(guild.id)]["reports_alert_role_id"])
                 if reports_alert_role is None:
-                    reports_alert_role = "None"
+                    reports_alert_role = "`None`"
                 else:
                     reports_alert_role = reports_alert_role.mention
-            else:
-                reports_alert_role = "None"
 
             if "reports_banned_role_id" in self.bot.guild_settings[str(guild.id)]:
                 reports_banned_role_id = guild.get_role(
                     self.bot.guild_settings[str(guild.id)]["reports_banned_role_id"])
                 if reports_banned_role_id is None:
-                    reports_banned_role_id = "None"
+                    reports_banned_role_id = "`None`"
                 else:
                     reports_banned_role_id = reports_banned_role_id.mention
-            else:
-                reports_banned_role_id = "None"
-
-        else:
-            reports_channel = "None"
-            reports_alert_role = "None"
-            reports_banned_role_id = "None"
 
         embed = discord.Embed(title="Settings",
                               description=f'Click a button to edit the value.')
@@ -98,6 +118,13 @@ class SettingsCommand(commands.Cog):
         embed.add_field(name="Reports Banned Role",
                         value=f"Would you like a role that prevents members with it from creating reports?\nValue: {reports_banned_role_id}",
                         inline=False)
+
+        embed.add_field(name="\uFEFF",
+                        value=f"Allow members to report themselves? `{report_self}`\n"
+                              f"Allow members to report bots? `{report_bots}`\n"
+                              f"Allow members to report server admins? `{report_admins}`",
+                        inline=False)
+
         embed.colour = discord.Colour(0x2F3136)
 
         return embed
@@ -119,6 +146,22 @@ class SettingsCommand(commands.Cog):
         view = self.SettingButtons(bot=self.bot,
                                    userID=interaction.user.id,
                                    settingsCog=self)
+        for item in view.children:
+            if item.label == "Report Self":
+                if self.isReportSelfEnabled(interaction.guild):
+                    item.style = discord.ButtonStyle.green
+                else:
+                    item.style = discord.ButtonStyle.red
+            if item.label == "Report Bots":
+                if self.isReportBotsEnabled(interaction.guild):
+                    item.style = discord.ButtonStyle.green
+                else:
+                    item.style = discord.ButtonStyle.red
+            if item.label == "Report Admins":
+                if self.isReportAdminsEnabled(interaction.guild):
+                    item.style = discord.ButtonStyle.green
+                else:
+                    item.style = discord.ButtonStyle.red
 
         await interaction.response.send_message(embed=self.getSettingsEmbed(interaction.guild), ephemeral=False,
                                                 view=view)
@@ -170,18 +213,96 @@ class SettingsCommand(commands.Cog):
             reportsBannedRoleModel = self.settingCog.ReportsBannedRoleModel(self.bot, self)
             await interaction.response.send_modal(reportsBannedRoleModel)
 
-        @discord.ui.button(label='Finish', style=discord.ButtonStyle.grey)
+        @discord.ui.button(label='Report Self', row=1)
+        async def reportSelf(self, button: discord.ui.Button, interaction: discord.Interaction):
+            report_self = True  # default
+
+            if str(interaction.guild.id) in self.bot.guild_settings:
+                if "report_self" in self.bot.guild_settings[str(interaction.guild.id)]:
+                    report_self = self.bot.guild_settings[str(interaction.guild.id)]["report_self"]
+            else:
+                self.bot.guild_settings[str(interaction.guild.id)] = {}
+
+            if report_self:
+                embed = discord.Embed(title="Self Report Disabled")
+                embed.description = "Members can no longer report themselves."
+                embed.colour = discord.Colour.dark_red()
+                button.style = discord.ButtonStyle.red
+
+            else:
+                embed = discord.Embed(title="Self Report Enabled")
+                embed.description = "Members can now report themselves."
+                embed.colour = discord.Colour.green()
+                button.style = discord.ButtonStyle.green
+
+            self.bot.guild_settings[str(interaction.guild.id)]["report_self"] = not report_self
+            await self.message.edit(view=self)
+            await self.reloadSettingsEmbed()
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # print(self.bot.guild_settings)
+
+        @discord.ui.button(label='Report Bots', row=1)
+        async def reportBots(self, button: discord.ui.Button, interaction: discord.Interaction):
+            report_bots = True  # default
+
+            if str(interaction.guild.id) in self.bot.guild_settings:
+                if "report_bots" in self.bot.guild_settings[str(interaction.guild.id)]:
+                    report_bots = self.bot.guild_settings[str(interaction.guild.id)]["report_bots"]
+            else:
+                self.bot.guild_settings[str(interaction.guild.id)] = {}
+
+            if report_bots:
+                embed = discord.Embed(title="Bot Reports Disabled")
+                embed.description = "Members can no longer report bots."
+                embed.colour = discord.Colour.dark_red()
+                button.style = discord.ButtonStyle.red
+
+            else:
+                embed = discord.Embed(title="Bot Reports Enabled")
+                embed.description = "Members can now report bots."
+                embed.colour = discord.Colour.green()
+                button.style = discord.ButtonStyle.green
+
+            self.bot.guild_settings[str(interaction.guild.id)]["report_bots"] = not report_bots
+            await self.message.edit(view=self)
+            await self.reloadSettingsEmbed()
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # print(self.bot.guild_settings)
+
+        @discord.ui.button(label='Report Admins', row=1)
+        async def reportAdmins(self, button: discord.ui.Button, interaction: discord.Interaction):
+            report_admins = True  # default
+
+            if str(interaction.guild.id) in self.bot.guild_settings:
+                if "report_admins" in self.bot.guild_settings[str(interaction.guild.id)]:
+                    report_admins = self.bot.guild_settings[str(interaction.guild.id)]["report_admins"]
+            else:
+                self.bot.guild_settings[str(interaction.guild.id)] = {}
+
+            if report_admins:
+                embed = discord.Embed(title="Admin Reports Disabled")
+                embed.description = "Members can no longer report server admins."
+                embed.colour = discord.Colour.dark_red()
+                button.style = discord.ButtonStyle.red
+
+            else:
+                embed = discord.Embed(title="Admin Reports Enabled")
+                embed.description = "Members can now report server admins."
+                embed.colour = discord.Colour.green()
+                button.style = discord.ButtonStyle.green
+
+            self.bot.guild_settings[str(interaction.guild.id)]["report_admins"] = not report_admins
+            await self.message.edit(view=self)
+            await self.reloadSettingsEmbed()
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # print(self.bot.guild_settings)
+
+        @discord.ui.button(label='Finish', style=discord.ButtonStyle.grey, row=1)
         async def finish(self, button: discord.ui.Button, interaction: discord.Interaction):
             await self.on_timeout()
             self.stop()
 
-        # @discord.ui.button(label='Report Bots', style=discord.ButtonStyle.green, emoji="")
-        # async def finish(self, button: discord.ui.Button, interaction: discord.Interaction):
-        #     await self.on_timeout()
-        #     self.stop()
-
     # MODALS
-
     class ReportsChannelModel(ui.Modal, title="Reports Channel"):
         """ The modal that asks you to enter a channel for reports to get sent to"""
 
