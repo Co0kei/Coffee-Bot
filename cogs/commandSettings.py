@@ -320,8 +320,18 @@ class SettingsCommand(commands.Cog):
             reportsChannel = self.channel.value
             channel = self.settingsButtons.settingCog.checkValidChannel(reportsChannel, interaction.guild)
 
-            if channel is None:
-                embed = discord.Embed(title="Channel not found", description="Please enter a valid channel name.",
+            if reportsChannel.lower() == "none" or reportsChannel.lower() == "reset":
+                embed = discord.Embed(title="Channel reset", description="You have removed the Alert Channel.",
+                                      colour=discord.Colour.green())
+                if str(interaction.guild.id) in self.bot.guild_settings:
+                    if "reports_channel_id" in self.bot.guild_settings[str(interaction.guild.id)]:
+                        del self.bot.guild_settings[str(interaction.guild.id)]["reports_channel_id"]
+
+                await self.settingsButtons.reloadSettingsEmbed()
+
+            elif channel is None:
+                embed = discord.Embed(title="Channel not found",
+                                      description="Please enter a valid channel name.\nTo remove the current channel, enter `reset` instead of a channel name.",
                                       colour=discord.Colour.dark_red())
             else:
 
@@ -337,6 +347,7 @@ class SettingsCommand(commands.Cog):
                 await self.settingsButtons.reloadSettingsEmbed()
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
+            # print(self.bot.guild_settings)
 
     class ReportsAlertRoleModel(ui.Modal, title="Reports Alert Role"):
         """ The modal that asks you to enter a role name for each report to tag"""
@@ -355,8 +366,18 @@ class SettingsCommand(commands.Cog):
             reportsAlertRole = self.role.value
             role = self.settingsButtons.settingCog.checkValidRole(reportsAlertRole, interaction.guild)
 
-            if role is None:
-                embed = discord.Embed(title="Role not found", description="Please enter a valid role name.",
+            if reportsAlertRole.lower() == "none" or reportsAlertRole.lower() == "reset":
+                embed = discord.Embed(title="Role reset", description="You have removed the Alert Role.",
+                                      colour=discord.Colour.green())
+                if str(interaction.guild.id) in self.bot.guild_settings:
+                    if "reports_alert_role_id" in self.bot.guild_settings[str(interaction.guild.id)]:
+                        del self.bot.guild_settings[str(interaction.guild.id)]["reports_alert_role_id"]
+
+                await self.settingsButtons.reloadSettingsEmbed()
+
+            elif role is None:
+                embed = discord.Embed(title="Role not found",
+                                      description="Please enter a valid role name.\nTo remove the current role, enter `reset` instead of a role name.",
                                       colour=discord.Colour.dark_red())
             else:
                 embed = discord.Embed(title="Reports Alert Role Updated")
@@ -371,6 +392,8 @@ class SettingsCommand(commands.Cog):
                 await self.settingsButtons.reloadSettingsEmbed()
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
+
+            # print(self.bot.guild_settings)
 
     class ReportsBannedRoleModel(ui.Modal, title="Reports Banned Role"):
         """ The modal that asks you to enter a role name for a role that prevents users from making reports """
@@ -389,8 +412,18 @@ class SettingsCommand(commands.Cog):
             reportsBannedRole = self.role.value
             role = self.settingsButtons.settingCog.checkValidRole(reportsBannedRole, interaction.guild)
 
-            if role is None:
-                embed = discord.Embed(title="Role not found", description="Please enter a valid role name.",
+            if reportsBannedRole.lower() == "none" or reportsBannedRole.lower() == "reset":
+                embed = discord.Embed(title="Role reset", description="You have removed the Banned Role.",
+                                      colour=discord.Colour.green())
+                if str(interaction.guild.id) in self.bot.guild_settings:
+                    if "reports_banned_role_id" in self.bot.guild_settings[str(interaction.guild.id)]:
+                        del self.bot.guild_settings[str(interaction.guild.id)]["reports_banned_role_id"]
+
+                await self.settingsButtons.reloadSettingsEmbed()
+
+            elif role is None:
+                embed = discord.Embed(title="Role not found",
+                                      description="Please enter a valid role name.\nTo remove the current role, enter `reset` instead of a role name.",
                                       colour=discord.Colour.dark_red())
             else:
                 embed = discord.Embed(title="Reports Banned Role Updated")
@@ -405,6 +438,7 @@ class SettingsCommand(commands.Cog):
                 await self.settingsButtons.reloadSettingsEmbed()
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
+            # print(self.bot.guild_settings)
 
 
 async def setup(bot):
