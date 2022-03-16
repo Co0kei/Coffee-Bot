@@ -55,9 +55,10 @@ class ReportCommand(commands.Cog):
 
     def getNoReportsChannelEmbed(self) -> discord.Embed:
         embed = discord.Embed(title="Configuration Error")
-        embed.description = f'This Discord server has not been configured yet.\nPlease ask a server administrator to use the /settings command and set a reports channel.' \
+        embed.description = f'This Discord server has not been configured yet.\nPlease ask a server administrator to use the **/settings** command and set a reports channel.' \
                             f'\nCurrently I don\'t know which channel to send reports to!'
         embed.colour = discord.Colour.red()
+        embed.set_image(url="https://cdn.discordapp.com/attachments/764846716557197323/953752057725202472/unknown.png")
         return embed
 
     def getReportsBannedEmbed(self, guild: discord.Guild) -> discord.Embed:
@@ -95,20 +96,23 @@ class ReportCommand(commands.Cog):
                 return
 
         # Check not from self
-        if message.author.id == interaction.user.id:
-            await interaction.response.send_message("Sorry, you can't report your own messages!", ephemeral=True)
-            return
+        if not self.bot.get_cog("SettingsCommand").isReportSelfEnabled(interaction.guild):
+            if message.author.id == interaction.user.id:
+                await interaction.response.send_message("Sorry, you can't report your own messages!", ephemeral=True)
+                return
 
         # Check the message author is not a bot
-        if message.author.bot:
-            await interaction.response.send_message("Sorry, you can't report a bot's message!", ephemeral=True)
-            return
+        if not self.bot.get_cog("SettingsCommand").isReportBotsEnabled(interaction.guild):
+            if message.author.bot:
+                await interaction.response.send_message("Sorry, you can't report a bot's message!", ephemeral=True)
+                return
 
         # Check the member is not an admin
-        if message.author.guild_permissions.administrator:
-            await interaction.response.send_message("Sorry, you can't report a server administrator's message!",
-                                                    ephemeral=True)
-            return
+        if not self.bot.get_cog("SettingsCommand").isReportAdminsEnabled(interaction.guild):
+            if message.author.guild_permissions.administrator and not message.author.bot and not message.author.id == interaction.user.id:
+                await interaction.response.send_message("Sorry, you can't report a server administrator's message!",
+                                                        ephemeral=True)
+                return
 
         cooldown = self.check_cooldown(interaction.user)
         if cooldown != 0:
@@ -214,19 +218,23 @@ class ReportCommand(commands.Cog):
                 return
 
         # Check not from self
-        if member.id == interaction.user.id:
-            await interaction.response.send_message("Sorry, you can't report yourself!", ephemeral=True)
-            return
+        if not self.bot.get_cog("SettingsCommand").isReportSelfEnabled(interaction.guild):
+            if member.id == interaction.user.id:
+                await interaction.response.send_message("Sorry, you can't report yourself!", ephemeral=True)
+                return
 
         # Check the member is not a bot
-        if member.bot:
-            await interaction.response.send_message("Sorry, you can't report a bot!", ephemeral=True)
-            return
+        if not self.bot.get_cog("SettingsCommand").isReportBotsEnabled(interaction.guild):
+            if member.bot:
+                await interaction.response.send_message("Sorry, you can't report a bot!", ephemeral=True)
+                return
 
         # Check the member is not an admin
-        if member.guild_permissions.administrator:
-            await interaction.response.send_message("Sorry, you can't report a server administrator!", ephemeral=True)
-            return
+        if not self.bot.get_cog("SettingsCommand").isReportAdminsEnabled(interaction.guild):
+            if member.guild_permissions.administrator and not member.bot and not member.id == interaction.user.id:
+                await interaction.response.send_message("Sorry, you can't report a server administrator!",
+                                                        ephemeral=True)
+                return
 
         cooldown = self.check_cooldown(interaction.user)
         if cooldown != 0:
