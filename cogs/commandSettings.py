@@ -28,7 +28,7 @@ class SettingsCommand(commands.Cog):
             reportsChannel = reportsChannel[1:]
 
         reportsChannel = reportsChannel.replace(' ', '-')
-
+        # print(reportsChannel)
         channel = None
         for textChannel in guild.text_channels:
             if textChannel.name == reportsChannel.lower() or str(textChannel.id) == reportsChannel:
@@ -73,6 +73,14 @@ class SettingsCommand(commands.Cog):
                 report_admins = self.bot.guild_settings[str(guild.id)]["report_admins"]
         return report_admins
 
+    def isInviteFilterEnabled(self, guild: discord.Guild) -> bool:
+        invite_filter = False  # filter disabled by default
+
+        if str(guild.id) in self.bot.guild_settings:
+            if "invite_filter" in self.bot.guild_settings[str(guild.id)]:
+                invite_filter = self.bot.guild_settings[str(guild.id)]["invite_filter"]
+        return invite_filter
+
     def getSettingsEmbed(self, guild: discord.Guild) -> discord.Embed:
 
         reports_channel = "`None`"
@@ -82,6 +90,9 @@ class SettingsCommand(commands.Cog):
         report_self = self.isReportSelfEnabled(guild)
         report_bots = self.isReportBotsEnabled(guild)
         report_admins = self.isReportAdminsEnabled(guild)
+
+        invite_filter = self.isInviteFilterEnabled(guild)
+        mod_log_channel = "`None`"
 
         if str(guild.id) in self.bot.guild_settings:
 
@@ -107,6 +118,13 @@ class SettingsCommand(commands.Cog):
                 else:
                     reports_banned_role_id = reports_banned_role_id.mention
 
+            if "mod_log_channel" in self.bot.guild_settings[str(guild.id)]:
+                mod_log_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["mod_log_channel"])
+                if mod_log_channel is None:
+                    mod_log_channel = "`None`"
+                else:
+                    mod_log_channel = mod_log_channel.mention
+
         embed = discord.Embed(title="Settings",
                               description=f'Click a button to edit the value.')
 
@@ -122,7 +140,9 @@ class SettingsCommand(commands.Cog):
         embed.add_field(name="\uFEFF",
                         value=f"Allow members to report themselves? `{report_self}`\n"
                               f"Allow members to report bots? `{report_bots}`\n"
-                              f"Allow members to report server admins? `{report_admins}`",
+                              f"Allow members to report server admins? `{report_admins}`\n\n"
+                              f"Discord Invite Filter: `{invite_filter}`\n"
+                              f"Mod Log Channel: {mod_log_channel}",
                         inline=False)
 
         embed.colour = discord.Colour(0x2F3136)
@@ -159,6 +179,12 @@ class SettingsCommand(commands.Cog):
                     item.style = discord.ButtonStyle.red
             if item.label == "Report Admins":
                 if self.isReportAdminsEnabled(interaction.guild):
+                    item.style = discord.ButtonStyle.green
+                else:
+                    item.style = discord.ButtonStyle.red
+
+            if item.label == "Invite Filter":
+                if self.isInviteFilterEnabled(interaction.guild):
                     item.style = discord.ButtonStyle.green
                 else:
                     item.style = discord.ButtonStyle.red
@@ -297,7 +323,40 @@ class SettingsCommand(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             # print(self.bot.guild_settings)
 
-        @discord.ui.button(label='Finish', style=discord.ButtonStyle.grey, row=1)
+        @discord.ui.button(label='Invite Filter', row=2)
+        async def inviteFilter(self, button: discord.ui.Button, interaction: discord.Interaction):
+            invite_filter = False  # filter disabled by default
+
+            if str(interaction.guild.id) in self.bot.guild_settings:
+                if "invite_filter" in self.bot.guild_settings[str(interaction.guild.id)]:
+                    invite_filter = self.bot.guild_settings[str(interaction.guild.id)]["invite_filter"]
+            else:
+                self.bot.guild_settings[str(interaction.guild.id)] = {}
+
+            if invite_filter:
+                embed = discord.Embed(title="Invite Filter Disabled")
+                embed.description = "Everyone can post invites to Discord servers."
+                embed.colour = discord.Colour.dark_red()
+                button.style = discord.ButtonStyle.red
+
+            else:
+                embed = discord.Embed(title="Invite Filter Enabled")
+                embed.description = "Only server administrators can post Discord server invites."
+                embed.colour = discord.Colour.green()
+                button.style = discord.ButtonStyle.green
+
+            self.bot.guild_settings[str(interaction.guild.id)]["invite_filter"] = not invite_filter
+            await self.message.edit(view=self)
+            await self.reloadSettingsEmbed()
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            print(self.bot.guild_settings)
+
+        @discord.ui.button(label='Mod Log Channel', style=discord.ButtonStyle.green, row=2)
+        async def modLogChannel(self, button: discord.ui.Button, interaction: discord.Interaction):
+            modLogChannelModel = self.settingCog.ModLogChannelModel(self.bot, self)
+            await interaction.response.send_modal(modLogChannelModel)
+
+        @discord.ui.button(label='Finish', style=discord.ButtonStyle.grey, row=2)
         async def finish(self, button: discord.ui.Button, interaction: discord.Interaction):
             await self.on_timeout()
             self.stop()
@@ -434,6 +493,52 @@ class SettingsCommand(commands.Cog):
                     self.bot.guild_settings[str(interaction.guild.id)] = {}
 
                 self.bot.guild_settings[str(interaction.guild.id)]["reports_banned_role_id"] = role.id
+
+                await self.settingsButtons.reloadSettingsEmbed()
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # print(self.bot.guild_settings)
+
+    class ModLogChannelModel(ui.Modal, title="Mod Log Channel"):
+        """ The modal that asks you to enter a channel for reports to get sent to"""
+
+        def __init__(self, bot=None, settingButtons=None):
+            super().__init__()
+            self.bot = bot
+            self.settingsButtons = settingButtons
+
+        channel = ui.TextInput(label='Mod Log Channel', style=discord.TextStyle.short,
+                               placeholder="Please enter the channel name, such as #logs",
+                               required=True, max_length=1000)
+
+        async def on_submit(self, interaction: discord.Interaction):
+
+            modLogChannel = self.channel.value
+            channel = self.settingsButtons.settingCog.checkValidChannel(modLogChannel, interaction.guild)
+
+            if modLogChannel.lower() == "none" or modLogChannel.lower() == "reset":
+                embed = discord.Embed(title="Channel reset", description="You have removed the Mod Log Channel.",
+                                      colour=discord.Colour.green())
+                if str(interaction.guild.id) in self.bot.guild_settings:
+                    if "mod_log_channel" in self.bot.guild_settings[str(interaction.guild.id)]:
+                        del self.bot.guild_settings[str(interaction.guild.id)]["mod_log_channel"]
+
+                await self.settingsButtons.reloadSettingsEmbed()
+
+            elif channel is None:
+                embed = discord.Embed(title="Channel not found",
+                                      description="Please enter a valid channel name.\nTo remove the current channel, enter `reset` instead of a channel name.",
+                                      colour=discord.Colour.dark_red())
+            else:
+
+                embed = discord.Embed(title="Mod Log Channel Updated")
+                embed.description = f"Successfully updated the mod log channel to {channel.mention}"
+                embed.colour = discord.Colour.green()
+
+                if not str(interaction.guild.id) in self.bot.guild_settings:
+                    self.bot.guild_settings[str(interaction.guild.id)] = {}
+
+                self.bot.guild_settings[str(interaction.guild.id)]["mod_log_channel"] = channel.id
 
                 await self.settingsButtons.reloadSettingsEmbed()
 
