@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import logging
@@ -5,6 +6,7 @@ import os
 import shutil
 import sys
 import textwrap
+import time
 import traceback
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -22,7 +24,7 @@ class OwnerCog(commands.Cog):
         self._last_result = None
 
     @commands.is_owner()
-    @commands.command()
+    @commands.command(description="Shows all cogs.")
     async def cogs(self, ctx):
         """ Command to list all cogs """
         embed = discord.Embed(title=f"**Cogs**", colour=discord.Colour.blue())
@@ -44,7 +46,7 @@ class OwnerCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.is_owner()
-    @commands.command()
+    @commands.command(description="Loads a cog")
     async def load(self, ctx, *, module=None):
         """ Load a specific cog """
         if module is None:
@@ -65,7 +67,7 @@ class OwnerCog(commands.Cog):
             await ctx.send(f"\U0000274c {e}")
 
     @commands.is_owner()
-    @commands.command()
+    @commands.command(description="Unloads a cog")
     async def unload(self, ctx, *, module=None):
         """ Unload a specific cog """
         if module is None:
@@ -86,7 +88,7 @@ class OwnerCog(commands.Cog):
             await ctx.send(f"\U0000274c {e}")
 
     @commands.is_owner()
-    @commands.command(aliases=["r"])
+    @commands.command(description="Reloads a cog", aliases=["r"])
     async def reload(self, ctx, *, module="interactions"):
         """" Reload a specific cog """
         if module is None:
@@ -104,7 +106,7 @@ class OwnerCog(commands.Cog):
             await ctx.send(f"\U0000274c {e}")
 
     @commands.is_owner()
-    @commands.command(aliases=["rall"])
+    @commands.command(description="Reloads all cogs", aliases=["rall"])
     async def reloadall(self, ctx):
         msg = ""
         for file in Path('cogs').glob('**/*.py'):
@@ -121,16 +123,15 @@ class OwnerCog(commands.Cog):
         await ctx.send(msg)
 
     @commands.is_owner()
-    @commands.command()
+    @commands.command(description="Saves all data to disk.")
     async def dump(self, ctx):
+        """ Save data to disk """
 
-        # save commands used
-        data = {"commands_used": self.bot.commands_used}
         with open('stats.json', 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
+            json.dump(self.bot.stat_data, f, ensure_ascii=False, indent=4)
             f.close()
 
-        log.info("[DUMP] Saved commands_used: " + str(self.bot.commands_used))
+        log.info("[DUMP] Saved stat_data: " + str(self.bot.stat_data))
 
         # save guild settings
         with open('guild_settings.json', 'w', encoding='utf-8') as f:
@@ -139,12 +140,39 @@ class OwnerCog(commands.Cog):
 
         log.info("[DUMP] Saved guild_settings: " + str(self.bot.guild_settings))
 
+        # save vote data
+        with open('votes.json', 'w', encoding='utf-8') as f:
+            json.dump(self.bot.vote_data, f, ensure_ascii=False, indent=4)
+            f.close()
+
+        log.info("[DUMP] Saved vote_data: " + str(self.bot.vote_data))
+
         await ctx.message.reply("Data saved")
 
     @commands.is_owner()
-    @commands.command()
-    async def test(self, ctx):
+    @commands.command(description="Reloads the data in memory by reading from disk")
+    async def refreshmemory(self, ctx):
+        """ Reload data from disk"""
+        with open('stats.json', 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            self.bot.stat_data = data
+            f.close()
 
+        with open('guild_settings.json', 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            self.bot.guild_settings = data  # load guild settings
+            f.close()
+
+        with open('votes.json', 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            self.bot.vote_data = data  # load vote data
+            f.close()
+
+        await ctx.message.reply("Data reloaded")
+
+    @commands.is_owner()
+    @commands.command(description="Shows 1000 most recent votes for the bot")
+    async def votes(self, ctx):
         users = await self.bot.topggpy.get_bot_votes()
 
         peoplethatvoted = []
@@ -154,10 +182,122 @@ class OwnerCog(commands.Cog):
             peoplethatvoted.append(username)
 
         await ctx.send(f'Bot Vote History:\n' + "\n".join(peoplethatvoted))
-        print(users)
 
     @commands.is_owner()
-    @commands.command()
+    @commands.command(description="Shows all owner help commands")
+    async def owner(self, ctx):
+        owner_commands = ""
+        for command in self.get_commands():
+            owner_commands += f'**{ctx.prefix}{command.name}** - {command.aliases} - {command.description}\n'
+
+        embed = discord.Embed(title="Owner Commands", description=owner_commands, colour=discord.Colour(0x2F3136))
+
+        await ctx.message.reply(embed=embed)
+
+    @commands.is_owner()
+    @commands.command(name="backup", description="Backups files")
+    async def backup(self, ctx):
+        files = ['guild_settings.json', 'stats.json', 'votes.json']
+
+        shutil.rmtree("backups")
+        os.mkdir('backups')
+
+        for f in files:
+            shutil.copy(f, 'backups')
+
+        if ctx is not None:
+            await ctx.reply("Done")
+
+    @commands.is_owner()
+    @commands.command(name="stop", description="Gracefully stops the bot")
+    async def _stop(self, ctx):
+
+        # check for vote alerts within the next 2 hours
+        msg = ""
+        current_time: int = int(time.time())
+        if "vote_reminder" in self.bot.vote_data:
+            vote_reminders: list = self.bot.vote_data["vote_reminder"]
+            if len(vote_reminders) != 0:
+                for discordID in vote_reminders:
+                    last_vote = self.bot.vote_data[str(discordID)]["last_vote"]
+                    difference = (current_time - last_vote)
+                    if difference > 36000:  # num of seconds in 10 hours
+                        # alert me if anyone is expecting an alert in next 2 hours
+                        msg += f'`+` Discord ID {discordID} is expecting a vote reminder <t:{self.bot.vote_data[str(discordID)]["last_vote"] + 43200}:R>\n'
+
+        if msg != "":
+            # ask if wants to continue
+            embed = discord.Embed(title="Vote reminders in the next 2 hours", description=msg[:4000],
+                                  color=discord.Colour.dark_theme())
+            view = self.Confirm()
+
+            sent_msg = await ctx.send(content='Do you want to continue?', embed=embed, view=view)
+
+            await view.wait()  # Wait for the View to stop listening for input...
+
+            await sent_msg.edit(view=None)
+
+            if view.value is None:
+                return  # timed out
+            elif view.value:
+                pass  # confirm
+            else:
+                return  # cancelled
+
+        await self.bot.change_presence(status=discord.Status.dnd, activity=discord.Game("Shutting down..."))
+        await asyncio.sleep(1)
+
+        cmd = self.bot.get_command("dump")
+        await cmd(ctx)
+
+        # unload all cogs
+        msg = ""
+        for file in Path('cogs').glob('**/*.py'):
+            *tree, _ = file.parts
+            try:
+                await self.bot.unload_extension(f"{'.'.join(tree)}.{file.stem}")
+                msg += f"\U00002705 Successfully unloaded {file}!\n"
+
+            except Exception as e:
+                print(f'Failed to unload extension {file}.', file=sys.stderr)
+                msg += f"\U0000274c Failed to unload {file} with reason: {e}\n"
+                traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+
+        await ctx.send(msg)
+
+        await self.bot.close()
+
+    class Confirm(discord.ui.View):
+        def __init__(self):
+            super().__init__()
+            self.value = None
+
+        @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
+        async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
+            await interaction.response.send_message('Stopping bot...', ephemeral=True)
+            self.value = True
+            self.stop()
+
+        @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey)
+        async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
+            await interaction.response.send_message('Cancelling', ephemeral=True)
+            self.value = False
+            self.stop()
+
+    @commands.is_owner()
+    @commands.command(description="Simulate a player voting. Used for testing purposes")
+    async def simvote(self, ctx, id=None, is_weekend=False):  # add optional weekend param
+        id = id or ctx.author.id
+
+        # {'user': 'id', 'type': 'upvote', 'query': {}, 'bot': 950765718209720360, 'is_weekend': False}
+        example_data = {'user': id, 'type': 'upvote', 'query': {}, 'bot': 950765718209720360,
+                        'is_weekend': is_weekend}
+
+        await self.bot.get_cog("EventCog").on_dbl_vote(example_data)
+        await ctx.message.reply("Vote simulated!\n" + str(example_data))
+
+    @commands.is_owner()
+    @commands.command(description="Syncs the command tree for the dev server")
     async def syncdev(self, ctx):
         await ctx.send("Processing")
         a = await self.bot.tree.sync(guild=discord.Object(id=self.bot.dev_server_id))
@@ -167,25 +307,26 @@ class OwnerCog(commands.Cog):
 
         await ctx.message.reply("Server interactions synced: " + str(a))
 
-    # @commands.is_owner()
-    # @commands.command()
-    # async def removelocal(self, ctx, guild=None):
-    #     await ctx.send("Processing")
-    #
-    #     for command in self.bot.tree.get_commands(guild=discord.Object(guild or ctx.guild.id)):
-    #         self.bot.tree.remove_command(command.name, guild=discord.Object(guild or ctx.guild.id))
-    #
-    #     await ctx.message.reply("Server interactions removed")
+    @commands.is_owner()
+    @commands.command(description="Removes guild specific command tree commands")
+    async def removelocal(self, ctx, guild=None):
+        await ctx.send("Processing")
+
+        guild = guild or ctx.guild.id
+        for command in self.bot.tree.get_commands(guild=discord.Object(guild)):
+            self.bot.tree.remove_command(command.name, guild=discord.Object(guild))
+
+        await ctx.message.reply("Server interactions removed")
 
     @commands.is_owner()
-    @commands.command()
+    @commands.command(description="Syncs the global command tree. This takes one hour to propogate")
     async def syncglobal(self, ctx):
         await ctx.send("processing global sync")
         a = await self.bot.tree.sync()
         await ctx.message.reply("Global interaction sync done: " + str(a))
 
     @commands.is_owner()
-    @commands.command(name="clonerepo")
+    @commands.command(name="clonerepo", description="Pulls github commits")
     async def forceRefreshGithub(self, ctx):
         if sys.platform == "win32":
             await ctx.send("dont need to")
@@ -207,7 +348,7 @@ class OwnerCog(commands.Cog):
         return content.strip('` \n')
 
     @commands.is_owner()
-    @commands.command(name="eval")
+    @commands.command(name="eval", description="Evaluates code")
     async def _eval(self, ctx, *, body: str):
         """Evaluates code"""
 
