@@ -34,8 +34,8 @@ class HelpCommand(commands.Cog):
         f'**Report User** - Right click a user, scroll to \'Apps\', then click me to report a message.\n'
         f'**/report** - Used to report a user, as mobile devices do not support context menus.\n'
         f'**/settings** - Used to setup the bot in your server.\n'
-        f'**/about** - Some stats about the bot.', inline=False
-                        )
+        f'**/about** - Some stats about the bot.\n'
+        f'**/vote** - Shows your voting history.', inline=False)
 
         embed.add_field(name="__Setup__", value=
         f'1. First invite me to your server, using the button on my profile.\n'

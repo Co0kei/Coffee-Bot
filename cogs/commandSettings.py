@@ -349,7 +349,7 @@ class SettingsCommand(commands.Cog):
             await self.message.edit(view=self)
             await self.reloadSettingsEmbed()
             await interaction.response.send_message(embed=embed, ephemeral=True)
-            print(self.bot.guild_settings)
+            # print(self.bot.guild_settings)
 
         @discord.ui.button(label='Mod Log Channel', style=discord.ButtonStyle.green, row=2)
         async def modLogChannel(self, button: discord.ui.Button, interaction: discord.Interaction):

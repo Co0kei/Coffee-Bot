@@ -69,7 +69,7 @@ class AboutCommand(commands.Cog):
 
         version = pkg_resources.get_distribution('discord.py').version
         embed.add_field(name='Guilds', value=guilds)
-        embed.add_field(name='Commands Run', value=self.bot.commands_used)
+        embed.add_field(name='Commands Run', value=self.bot.stat_data["commands_used"])
 
         embed.add_field(name='Uptime', value=self.get_bot_uptime(brief=True))
         embed.set_footer(text=f'Made with discord.py v{version}', icon_url='http://i.imgur.com/5BFecvA.png')
