@@ -70,12 +70,17 @@ bot.dev_server_id = dev_server_id
 
 with open('stats.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
-    bot.commands_used = data["commands_used"]  # load command usage
+    bot.stat_data = data
     f.close()
 
 with open('guild_settings.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
     bot.guild_settings = data  # load guild settings
+    f.close()
+
+with open('votes.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+    bot.vote_data = data  # load vote data
     f.close()
 
 
