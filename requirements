@@ -1,0 +1,6 @@
+git+https://github.com/Rapptz/discord.py@c77bbc4dcf527c668933eae12969c876e127724e
+python-dateutil
+pygit2
+psutil
+topggpy
+bedwarspro
