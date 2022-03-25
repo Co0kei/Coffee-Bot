@@ -3,9 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-dev_server.py
-config.json
-stats.json
+constants.py
 *.json
 
 .idea/
