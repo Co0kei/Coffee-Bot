@@ -5,8 +5,10 @@ import sys
 import time
 import traceback
 from datetime import timedelta
+from typing import Union, Optional
 
 import discord
+from discord.app_commands import ContextMenu, Command
 from discord.ext import commands
 
 log = logging.getLogger(__name__)
@@ -15,6 +17,7 @@ log = logging.getLogger(__name__)
 class EventCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        bot.tree.on_error = self.on_command_tree_error
 
     def getModLogChannel(self, guild: discord.Guild) -> discord.TextChannel:
         mod_log_channel = None
@@ -138,6 +141,8 @@ class EventCog(commands.Cog):
         await self.bot.change_presence(
             activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(self.bot.guilds)} guilds'))
 
+        await self.post_guild_count()
+
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         log.info(f'I have been removed from {guild.name} ({guild.id}) which has {len(guild.members)} members.')
@@ -151,6 +156,16 @@ class EventCog(commands.Cog):
 
         await self.bot.change_presence(
             activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(self.bot.guilds)} guilds'))
+
+        await self.post_guild_count()
+
+    async def post_guild_count(self):
+        try:
+            await self.bot.topggpy.post_guild_count(shard_count=self.bot.shard_count)
+            self.bot.dispatch("autopost_success")
+
+        except Exception as e:
+            self.bot.dispatch("autopost_error", e)
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
@@ -194,8 +209,39 @@ class EventCog(commands.Cog):
                 await self.bot.hook.send(embed=embed)
 
     @commands.Cog.listener()
+    async def on_command_completion(self, ctx):
+        command_name = ctx.command.name
+        user = f'{ctx.author} (ID: {ctx.author.id})'
+
+        if ctx.guild is None:
+            guild = None
+        else:
+            guild = f'{ctx.guild.name} (ID: {ctx.guild.id})'
+
+        self.bot.stat_data["commands_used"] += 1
+
+        log.info(
+            f'Message based command \'{command_name}\' ran by {user}. Guild: {guild}. Commands used: {self.bot.stat_data["commands_used"]}!')
+
+        embed = discord.Embed(colour=discord.Colour.blurple())
+        embed.set_author(name=f'Command ran by {user}', icon_url=ctx.author.display_avatar.url)
+        embed.add_field(name='Type', value=f'Message based', inline=False)
+        embed.add_field(name='Command Name', value=f'{command_name}', inline=False)
+        embed.add_field(name='Guild', value=f'{guild}', inline=False)
+        embed.timestamp = discord.utils.utcnow()
+        embed.set_footer(text=f'Total commands ran: {self.bot.stat_data["commands_used"]}')
+
+        if ctx.author.id != self.bot.owner_id:
+            await self.bot.hook.send(embed=embed)
+
+    @commands.Cog.listener()
     async def on_autopost_success(self):
-        log.info(f"Posted server count ({self.bot.topggpy.guild_count}), shard count ({self.bot.shard_count})")
+        log.info(
+            f"Posted to top.gg: server count ({self.bot.topggpy.guild_count}), shard count ({self.bot.shard_count})")
+
+    @commands.Cog.listener()
+    async def on_autopost_error(self, error):
+        log.info(f"Failed to post to top.gg: {error}")
 
     @commands.Cog.listener()
     async def on_dbl_vote(self, data):
@@ -356,6 +402,13 @@ class EventCog(commands.Cog):
                 print(f'Error in {ctx.command.qualified_name}:', file=sys.stderr)
                 traceback.print_tb(original.__traceback__)
                 print(f'{original.__class__.__name__}: {original}', file=sys.stderr)
+
+    async def on_command_tree_error(self, interaction: discord.Interaction,
+                                    command: Optional[Union[Command, ContextMenu]],
+                                    error: discord.app_commands.AppCommandError):
+        print(f'Error in {command.name}:', file=sys.stderr)
+        traceback.print_tb(error.__traceback__)
+        print(f'{error.__class__.__name__}: {error}', file=sys.stderr)
 
 
 async def setup(bot):
