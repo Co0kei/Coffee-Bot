@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import dev_server
+import constants
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class HelpCommand(commands.Cog):
         await self.handleHelpCommand(interaction)
 
     @app_commands.command(name='devhelp', description='Dev - Information on commands & bot setup.')
-    @app_commands.guilds(discord.Object(id=dev_server.DEV_SERVER_ID))
+    @app_commands.guilds(discord.Object(id=constants.DEV_SERVER_ID))
     async def devHelpCommand(self, interaction: discord.Interaction):
         await self.handleHelpCommand(interaction)
 

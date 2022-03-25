@@ -4,7 +4,7 @@ import discord
 from discord import ui, app_commands
 from discord.ext import commands
 
-import dev_server
+import constants
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class SettingsCommand(commands.Cog):
         await self.handleSettingsCommand(interaction)
 
     @app_commands.command(name='devsettings', description='Dev - Configure how Coffee Bot is setup in your server.')
-    @app_commands.guilds(discord.Object(id=dev_server.DEV_SERVER_ID))
+    @app_commands.guilds(discord.Object(id=constants.DEV_SERVER_ID))
     async def devSettingsCommand(self, interaction: discord.Interaction):
         await self.handleSettingsCommand(interaction)
 

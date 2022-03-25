@@ -10,7 +10,7 @@ from dateutil.relativedelta import relativedelta
 from discord import app_commands
 from discord.ext import commands
 
-import dev_server
+import constants
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class AboutCommand(commands.Cog):
         await self.handleAboutCommand(interaction)
 
     @app_commands.command(name='devabout', description='Dev - Shows statistics about the bot itself.')
-    @app_commands.guilds(discord.Object(id=dev_server.DEV_SERVER_ID))
+    @app_commands.guilds(discord.Object(id=constants.DEV_SERVER_ID))
     async def devAboutCommand(self, interaction: discord.Interaction):
         await self.handleAboutCommand(interaction)
 

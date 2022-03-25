@@ -6,7 +6,7 @@ import discord
 from discord import app_commands, ui
 from discord.ext import commands
 
-import dev_server
+import constants
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class ReportCommand(commands.Cog):
         await self.handleUserReport(interaction, member, image)
 
     @app_commands.command(name='devreport', description='Dev- Report a member with a reason for staff to see.')
-    @app_commands.guilds(discord.Object(id=dev_server.DEV_SERVER_ID))
+    @app_commands.guilds(discord.Object(id=constants.DEV_SERVER_ID))
     @discord.app_commands.describe(member='The member you are reporting.')
     @discord.app_commands.describe(image='You can upload an image for staff to see if you wish.')
     async def devReportCommand(self, interaction: discord.Interaction, member: discord.User,

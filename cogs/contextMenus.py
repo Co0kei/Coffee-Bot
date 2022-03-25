@@ -9,7 +9,7 @@ class ContextMenus(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # not supported in cogs yet
+    # # not supported in cogs yet
     # # Report message
     # @app_commands.context_menu(name='Report Message')
     # async def globalReportMessage(self, interaction: discord.Interaction, message: discord.Message):
