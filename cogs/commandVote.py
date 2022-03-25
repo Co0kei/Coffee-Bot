@@ -5,7 +5,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import dev_server
+import constants
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class VoteCommand(commands.Cog):
         await self.handleVoteCommand(interaction)
 
     @app_commands.command(name='devvote', description='Dev - Help more people discover coffee bot and earn coins!')
-    @app_commands.guilds(discord.Object(id=dev_server.DEV_SERVER_ID))
+    @app_commands.guilds(discord.Object(id=constants.DEV_SERVER_ID))
     async def devVoteCommand(self, interaction: discord.Interaction):
         await self.handleVoteCommand(interaction)
 
@@ -40,24 +40,34 @@ class VoteCommand(commands.Cog):
             vote_history: list = self.bot.vote_data[discordID]["vote_history"]
             total_votes = 0
 
-            formatted = []
             vote_history.reverse()
+
+            voteMessage_list = []
+            timeStamp_list = []
             for vote in vote_history:
                 message = "`+` " + str(vote["coins"]) + ":coin: (<t:" + str(vote["time"]) + ":R>)"
                 if vote["is_weekend"]:
                     total_votes += 2
-                    message += " **DOUBLE** coins & 2 votes!"
+                    message += " **DOUBLE** coins & votes!"
                 else:
                     total_votes += 1
-                formatted.append(message)
-            formatted = "\n".join(formatted)
+                voteMessage_list.append(message)
+                timeStamp_list.append(vote["time"])
+
+            # Sort the data
+            # print(voteMessage_list)
+            # print(timeStamp_list)
+
+            data_sort = [list(a) for a in zip(voteMessage_list, timeStamp_list)]
+            list4 = sorted(data_sort, key=lambda x: x[1], reverse=True)
+            voteMessage_list, timeStamp_list = map(list, zip(*list4))
+
+            formatted = "\n".join(voteMessage_list)
 
             total_coins = sum([element["coins"] for element in vote_history])
-            vote_streak = self.bot.vote_data[discordID]["vote_streak"]
             last_vote = f'<t:{self.bot.vote_data[discordID]["last_vote"]}:R>.'
 
             difference = (int(time.time()) - self.bot.vote_data[discordID]["last_vote"])
-            # print(difference)
             if difference > 43200:  # num of seconds in 12 hours
                 # can vote again now.
                 last_vote += " You can [vote](https://top.gg/bot/950765718209720360/vote) again now!"
@@ -65,6 +75,11 @@ class VoteCommand(commands.Cog):
                 # must wait some time
                 # get time of last vote and add on seconds in 12 hours to get the time they can vote again
                 last_vote += f' You can [vote](https://top.gg/bot/950765718209720360/vote) again <t:{self.bot.vote_data[discordID]["last_vote"] + 43200}:R>.'
+
+            if difference > 86400:  # num of seconds in a day
+                vote_streak = 0
+            else:
+                vote_streak = self.bot.vote_data[discordID]["vote_streak"]
         else:
             total_votes = 0
             formatted = "`None`"
