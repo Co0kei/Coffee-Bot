@@ -184,6 +184,12 @@ class OwnerCog(commands.Cog):
         await ctx.send(f'Bot Vote History:\n' + "\n".join(peoplethatvoted))
 
     @commands.is_owner()
+    @commands.command(description="Manually update the bots server and shard count to top.gg")
+    async def updatetopgg(self, ctx):
+        await self.bot.get_cog("EventCog").post_guild_count()
+        await ctx.message.reply("Done")
+
+    @commands.is_owner()
     @commands.command(description="Shows all owner help commands")
     async def owner(self, ctx):
         owner_commands = ""
