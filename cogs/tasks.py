@@ -64,6 +64,12 @@ class TaskCog(commands.Cog):
                     if difference > 43200:  # num of seconds in 12 hours
                         # if been more than 12 hours - send a reminder
                         user = self.bot.get_user(int(discordID))
+                        print(f"Attempting to send vote reminder. User: {user}")
+                        if user is None:
+                            # user not in cache so attempt to retrieve them
+                            user = await self.bot.fetch_user(int(discordID))
+                            print(f"User was none attempting an API call. User: {user}")
+                            
                         if user is not None:
                             try:
                                 await user.send(
