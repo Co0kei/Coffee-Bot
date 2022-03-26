@@ -202,9 +202,12 @@ class ReportCommand(commands.Cog):
     async def handleUserReport(self, interaction: discord.Interaction, member: discord.Member,
                                attachment: discord.Attachment):
 
+        # print(interaction.guild)
+        if interaction.guild is None:
+            return await interaction.response.send_message("Please use this command in a Discord server.")
+
         if isinstance(member, discord.User):
-            await interaction.response.send_message("Please use this command in a Discord server.")
-            return
+            return await interaction.response.send_message("This user is no longer in this server.", ephemeral=True)
 
         # check that their is a channel setup
         if self.getReportsChannel(member.guild) is None:
