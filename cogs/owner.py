@@ -14,6 +14,10 @@ from pathlib import Path
 import discord
 import pygit2
 from discord.ext import commands
+from discord.ext.commands import Context
+from discord.ext.commands._types import BotT
+
+from constants import DEV_SERVER_ID
 
 log = logging.getLogger(__name__)
 
@@ -23,26 +27,37 @@ class OwnerCog(commands.Cog):
         self.bot = bot
         self._last_result = None
 
-    @commands.is_owner()
+    def cog_check(self, ctx: Context[BotT]) -> bool:
+        return ctx.author.id == self.bot.owner_id
+
+    @commands.command(description="Shows all owner help commands")
+    async def owner(self, ctx):
+        owner_commands = ""
+        for command in self.get_commands():
+            owner_commands += f'**{ctx.prefix}{command.name}** - {command.aliases} - {command.description}\n'
+
+        embed = discord.Embed(title="Owner Commands", description=owner_commands, colour=discord.Colour(0x2F3136))
+
+        await ctx.message.reply(embed=embed)
+
     @commands.command(description="Shows all cogs.")
     async def cogs(self, ctx):
-        """ Command to list all cogs """
-        embed = discord.Embed(title=f"**Cogs**", colour=discord.Colour.blue())
+        """ Command to list all cogs and whether they are loaded or not """
+        embed = discord.Embed(colour=discord.Colour.blue())
+
+        loaded_extensions = [str(e) for e in self.bot.extensions]
 
         cogs_data = ""
-        for filename in os.listdir('./cogs'):
-            if filename.endswith('.py'):
-                try:
-                    await self.bot.load_extension(f'cogs.{filename[:-3]}')
-                except commands.ExtensionAlreadyLoaded:
-                    cogs_data += f"<:online:821068743987429438> {filename}\n"
-                    # loaded
-                else:
-                    await self.bot.unload_extension(f'cogs.{filename[:-3]}')
-                    cogs_data += f"<:offline:821068938036379679> {filename}\n"
-                    # unloaded
+        for file in Path('cogs').glob('**/*.py'):
+            *tree, _ = file.parts
+            cog_path = f"{'.'.join(tree)}.{file.stem}"
+            if cog_path in loaded_extensions:
+                cogs_data += f"<:online:821068743987429438> {cog_path}\n"
+            else:
+                cogs_data += f"<:offline:821068938036379679> {cog_path}\n"
 
         embed.add_field(name="**Cogs**", value=f"{cogs_data}", inline=True)
+
         await ctx.send(embed=embed)
 
     @commands.is_owner()
@@ -89,7 +104,7 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.command(description="Reloads a cog", aliases=["r"])
-    async def reload(self, ctx, *, module="interactions"):
+    async def reload(self, ctx, *, module=None):
         """" Reload a specific cog """
         if module is None:
             await ctx.send(f"\U0000274c Enter a cog to reload!")
@@ -100,6 +115,9 @@ class OwnerCog(commands.Cog):
 
         except commands.ExtensionNotFound:
             await ctx.send("\U0000274c This cog could not be found!")
+
+        except commands.ExtensionNotLoaded:
+            await ctx.send("\U0000274c This cog is not loaded!")
 
         except Exception as e:
             traceback.print_exc()
@@ -131,23 +149,24 @@ class OwnerCog(commands.Cog):
             json.dump(self.bot.stat_data, f, ensure_ascii=False, indent=4)
             f.close()
 
-        log.info("[DUMP] Saved stat_data: " + str(self.bot.stat_data))
+        # log.info("[DUMP] Saved stat_data: " + str(self.bot.stat_data))
 
         # save guild settings
         with open('guild_settings.json', 'w', encoding='utf-8') as f:
             json.dump(self.bot.guild_settings, f, ensure_ascii=False, indent=4)
             f.close()
 
-        log.info("[DUMP] Saved guild_settings: " + str(self.bot.guild_settings))
+        # log.info("[DUMP] Saved guild_settings: " + str(self.bot.guild_settings))
 
         # save vote data
         with open('votes.json', 'w', encoding='utf-8') as f:
             json.dump(self.bot.vote_data, f, ensure_ascii=False, indent=4)
             f.close()
 
-        log.info("[DUMP] Saved vote_data: " + str(self.bot.vote_data))
+        # log.info("[DUMP] Saved vote_data: " + str(self.bot.vote_data))
 
-        await ctx.message.reply("Data saved")
+        if ctx is not None:
+            await ctx.message.reply("Data saved")
 
     @commands.is_owner()
     @commands.command(description="Reloads the data in memory by reading from disk")
@@ -170,35 +189,24 @@ class OwnerCog(commands.Cog):
 
         await ctx.message.reply("Data reloaded")
 
-    @commands.is_owner()
-    @commands.command(description="Shows 1000 most recent votes for the bot")
-    async def votes(self, ctx):
-        users = await self.bot.topggpy.get_bot_votes()
-
-        peoplethatvoted = []
-
-        for user in users:
-            username = user["username"]
-            peoplethatvoted.append(username)
-
-        await ctx.send(f'Bot Vote History:\n' + "\n".join(peoplethatvoted))
-
-    @commands.is_owner()
-    @commands.command(description="Manually update the bots server and shard count to top.gg")
-    async def updatetopgg(self, ctx):
-        await self.bot.get_cog("EventCog").post_guild_count()
-        await ctx.message.reply("Done")
-
-    @commands.is_owner()
-    @commands.command(description="Shows all owner help commands")
-    async def owner(self, ctx):
-        owner_commands = ""
-        for command in self.get_commands():
-            owner_commands += f'**{ctx.prefix}{command.name}** - {command.aliases} - {command.description}\n'
-
-        embed = discord.Embed(title="Owner Commands", description=owner_commands, colour=discord.Colour(0x2F3136))
-
-        await ctx.message.reply(embed=embed)
+    # @commands.is_owner()
+    # @commands.command(description="Shows 1000 most recent votes for the bot")
+    # async def votes(self, ctx):
+    #     users = await self.bot.topggpy.get_bot_votes()
+    #
+    #     peoplethatvoted = []
+    #
+    #     for user in users:
+    #         username = user["username"]
+    #         peoplethatvoted.append(username)
+    #
+    #     await ctx.send(f'Bot Vote History:\n' + "\n".join(peoplethatvoted))
+    #
+    # @commands.is_owner()
+    # @commands.command(description="Manually update the bots server and shard count to top.gg")
+    # async def updatetopgg(self, ctx):
+    #     await self.bot.get_cog("EventCog").post_guild_count()
+    #     await ctx.message.reply("Done")
 
     @commands.is_owner()
     @commands.command(name="backup", description="Backups files")
@@ -213,6 +221,46 @@ class OwnerCog(commands.Cog):
 
         if ctx is not None:
             await ctx.reply("Done")
+
+    @commands.is_owner()
+    @commands.command(description="Simulate a player voting. Used for testing purposes")
+    async def simvote(self, ctx, id=None, is_weekend=False):  # add optional weekend param
+        id = id or ctx.author.id
+
+        # {'user': 'id', 'type': 'upvote', 'query': {}, 'bot': 950765718209720360, 'is_weekend': False}
+        example_data = {'user': id, 'type': 'upvote', 'query': {}, 'bot': 950765718209720360,
+                        'is_weekend': is_weekend}
+
+        await self.bot.get_cog("EventCog").on_dbl_vote(example_data)
+        await ctx.message.reply("Vote simulated!\n" + str(example_data))
+
+    @commands.is_owner()
+    @commands.command(description="Syncs the command tree for the dev server")
+    async def syncdev(self, ctx):
+        await ctx.send("Processing")
+
+        self.bot.tree.copy_global_to(guild=discord.Object(id=DEV_SERVER_ID))
+        result = await self.bot.tree.sync(guild=discord.Object(id=DEV_SERVER_ID))
+
+        await ctx.message.reply("Synced dev server interactions:\n" + str(result))
+
+    @commands.is_owner()
+    @commands.command(description="Removes guild specific command tree commands from the dev server")
+    async def cleardev(self, ctx):
+        await ctx.send("Processing")
+
+        for command in await self.bot.tree.fetch_commands(guild=discord.Object(id=DEV_SERVER_ID)):
+            self.bot.tree.remove_command(command.name, guild=discord.Object(id=DEV_SERVER_ID), type=command.type)
+
+        result = await self.bot.tree.sync(guild=discord.Object(id=DEV_SERVER_ID))
+        await ctx.message.reply("Dev server local interactions removed:\n" + str(result))
+
+    @commands.is_owner()
+    @commands.command(description="Syncs the global command tree. This takes one hour to propogate")
+    async def syncglobal(self, ctx):
+        await ctx.send("Processing global sync")
+        result = await self.bot.tree.sync()
+        await ctx.message.reply("Global interaction sync complete:\n" + str(result))
 
     @commands.is_owner()
     @commands.command(name="stop", description="Gracefully stops the bot")
@@ -279,57 +327,16 @@ class OwnerCog(commands.Cog):
             self.value = None
 
         @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
-        async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
             await interaction.response.send_message('Stopping bot...', ephemeral=True)
             self.value = True
             self.stop()
 
         @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey)
-        async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
             await interaction.response.send_message('Cancelling', ephemeral=True)
             self.value = False
             self.stop()
-
-    @commands.is_owner()
-    @commands.command(description="Simulate a player voting. Used for testing purposes")
-    async def simvote(self, ctx, id=None, is_weekend=False):  # add optional weekend param
-        id = id or ctx.author.id
-
-        # {'user': 'id', 'type': 'upvote', 'query': {}, 'bot': 950765718209720360, 'is_weekend': False}
-        example_data = {'user': id, 'type': 'upvote', 'query': {}, 'bot': 950765718209720360,
-                        'is_weekend': is_weekend}
-
-        await self.bot.get_cog("EventCog").on_dbl_vote(example_data)
-        await ctx.message.reply("Vote simulated!\n" + str(example_data))
-
-    @commands.is_owner()
-    @commands.command(description="Syncs the command tree for the dev server")
-    async def syncdev(self, ctx):
-        await ctx.send("Processing")
-        a = await self.bot.tree.sync(guild=discord.Object(id=self.bot.dev_server_id))
-        # print(self.bot.tree)
-        # print(ctx.guild.id)
-        # a = await self.bot.tree.copy_global_to(guild=discord.Object(ctx.guild.id))
-
-        await ctx.message.reply("Server interactions synced: " + str(a))
-
-    @commands.is_owner()
-    @commands.command(description="Removes guild specific command tree commands")
-    async def removelocal(self, ctx, guild=None):
-        await ctx.send("Processing")
-
-        guild = guild or ctx.guild.id
-        for command in self.bot.tree.get_commands(guild=discord.Object(guild)):
-            self.bot.tree.remove_command(command.name, guild=discord.Object(guild))
-
-        await ctx.message.reply("Server interactions removed")
-
-    @commands.is_owner()
-    @commands.command(description="Syncs the global command tree. This takes one hour to propogate")
-    async def syncglobal(self, ctx):
-        await ctx.send("processing global sync")
-        a = await self.bot.tree.sync()
-        await ctx.message.reply("Global interaction sync done: " + str(a))
 
     @commands.is_owner()
     @commands.command(name="clonerepo", description="Pulls github commits")
