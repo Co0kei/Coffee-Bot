@@ -5,8 +5,6 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import constants
-
 log = logging.getLogger(__name__)
 
 
@@ -16,11 +14,6 @@ class VoteCommand(commands.Cog):
 
     @app_commands.command(name='vote', description='Help more people discover Coffee Bot and earn coins!')
     async def globalVoteCommand(self, interaction: discord.Interaction):
-        await self.handleVoteCommand(interaction)
-
-    @app_commands.command(name='devvote', description='Dev - Help more people discover coffee bot and earn coins!')
-    @app_commands.guilds(discord.Object(id=constants.DEV_SERVER_ID))
-    async def devVoteCommand(self, interaction: discord.Interaction):
         await self.handleVoteCommand(interaction)
 
     async def handleVoteCommand(self, interaction: discord.Interaction):

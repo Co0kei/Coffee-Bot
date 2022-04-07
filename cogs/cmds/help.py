@@ -4,8 +4,6 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import constants
-
 log = logging.getLogger(__name__)
 
 
@@ -17,15 +15,10 @@ class HelpCommand(commands.Cog):
     async def globalHelpCommand(self, interaction: discord.Interaction):
         await self.handleHelpCommand(interaction)
 
-    @app_commands.command(name='devhelp', description='Dev - Information on commands & bot setup.')
-    @app_commands.guilds(discord.Object(id=constants.DEV_SERVER_ID))
-    async def devHelpCommand(self, interaction: discord.Interaction):
-        await self.handleHelpCommand(interaction)
-
     async def handleHelpCommand(self, interaction: discord.Interaction):
         embed = discord.Embed()
-        embed.title = 'Official Bot Server Invite'
-        embed.url = 'https://discord.gg/rcUzqaQN8k'
+        # embed.title = 'Official Bot Server Invite'
+        # embed.url = 'https://discord.gg/rcUzqaQN8k'
         embed.colour = discord.Colour.blurple()
 
         embed.add_field(name="__Commands__", value=

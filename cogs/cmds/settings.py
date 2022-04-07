@@ -4,8 +4,6 @@ import discord
 from discord import ui, app_commands
 from discord.ext import commands
 
-import constants
-
 log = logging.getLogger(__name__)
 
 
@@ -15,11 +13,6 @@ class SettingsCommand(commands.Cog):
 
     @app_commands.command(name='settings', description='Configure how the bot works in your server.')
     async def globalSettingsCommand(self, interaction: discord.Interaction):
-        await self.handleSettingsCommand(interaction)
-
-    @app_commands.command(name='devsettings', description='Dev - Configure how Coffee Bot is setup in your server.')
-    @app_commands.guilds(discord.Object(id=constants.DEV_SERVER_ID))
-    async def devSettingsCommand(self, interaction: discord.Interaction):
         await self.handleSettingsCommand(interaction)
 
     # Methods
@@ -225,22 +218,22 @@ class SettingsCommand(commands.Cog):
             await self.message.edit(embed=self.settingCog.getSettingsEmbed(self.message.guild))
 
         @discord.ui.button(label='Reports Channel', style=discord.ButtonStyle.green)
-        async def reportsChannel(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def reportsChannel(self, interaction: discord.Interaction, button: discord.ui.Button):
             reportsChannelModel = self.settingCog.ReportsChannelModel(self.bot, self)
             await interaction.response.send_modal(reportsChannelModel)
 
         @discord.ui.button(label='Reports Alert Role', style=discord.ButtonStyle.green)
-        async def reportsAlertRole(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def reportsAlertRole(self, interaction: discord.Interaction, button: discord.ui.Button):
             reportsAlertRoleModel = self.settingCog.ReportsAlertRoleModel(self.bot, self)
             await interaction.response.send_modal(reportsAlertRoleModel)
 
         @discord.ui.button(label='Reports Banned Role', style=discord.ButtonStyle.green)
-        async def reportsBannedRole(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def reportsBannedRole(self, interaction: discord.Interaction, button: discord.ui.Button):
             reportsBannedRoleModel = self.settingCog.ReportsBannedRoleModel(self.bot, self)
             await interaction.response.send_modal(reportsBannedRoleModel)
 
         @discord.ui.button(label='Report Self', row=1)
-        async def reportSelf(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def reportSelf(self, interaction: discord.Interaction, button: discord.ui.Button):
             report_self = True  # default
 
             if str(interaction.guild.id) in self.bot.guild_settings:
@@ -268,7 +261,7 @@ class SettingsCommand(commands.Cog):
             # print(self.bot.guild_settings)
 
         @discord.ui.button(label='Report Bots', row=1)
-        async def reportBots(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def reportBots(self, interaction: discord.Interaction, button: discord.ui.Button):
             report_bots = True  # default
 
             if str(interaction.guild.id) in self.bot.guild_settings:
@@ -296,7 +289,7 @@ class SettingsCommand(commands.Cog):
             # print(self.bot.guild_settings)
 
         @discord.ui.button(label='Report Admins', row=1)
-        async def reportAdmins(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def reportAdmins(self, interaction: discord.Interaction, button: discord.ui.Button):
             report_admins = True  # default
 
             if str(interaction.guild.id) in self.bot.guild_settings:
@@ -324,7 +317,7 @@ class SettingsCommand(commands.Cog):
             # print(self.bot.guild_settings)
 
         @discord.ui.button(label='Invite Filter', row=2)
-        async def inviteFilter(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def inviteFilter(self, interaction: discord.Interaction, button: discord.ui.Button):
             invite_filter = False  # filter disabled by default
 
             if str(interaction.guild.id) in self.bot.guild_settings:
@@ -352,12 +345,12 @@ class SettingsCommand(commands.Cog):
             # print(self.bot.guild_settings)
 
         @discord.ui.button(label='Mod Log Channel', style=discord.ButtonStyle.green, row=2)
-        async def modLogChannel(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def modLogChannel(self, interaction: discord.Interaction, button: discord.ui.Button):
             modLogChannelModel = self.settingCog.ModLogChannelModel(self.bot, self)
             await interaction.response.send_modal(modLogChannelModel)
 
         @discord.ui.button(label='Finish', style=discord.ButtonStyle.grey, row=2)
-        async def finish(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def finish(self, interaction: discord.Interaction, button: discord.ui.Button):
             await self.on_timeout()
             self.stop()
 

@@ -1,14 +1,10 @@
 import logging
 import random
 import re
-import sys
 import time
-import traceback
 from datetime import timedelta
-from typing import Union, Optional
 
 import discord
-from discord.app_commands import ContextMenu, Command
 from discord.ext import commands
 
 log = logging.getLogger(__name__)
@@ -17,7 +13,6 @@ log = logging.getLogger(__name__)
 class EventCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        bot.tree.on_error = self.on_command_tree_error
 
     def getModLogChannel(self, guild: discord.Guild) -> discord.TextChannel:
         mod_log_channel = None
@@ -138,8 +133,7 @@ class EventCog(commands.Cog):
 
         await self.bot.hook.send(embed=embed)
 
-        await self.bot.change_presence(
-            activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(self.bot.guilds)} guilds'))
+        await self.bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(self.bot.guilds)} guilds'))
 
         await self.post_guild_count()
 
@@ -154,8 +148,7 @@ class EventCog(commands.Cog):
 
         await self.bot.hook.send(embed=embed)
 
-        await self.bot.change_presence(
-            activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(self.bot.guilds)} guilds'))
+        await self.bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(self.bot.guilds)} guilds'))
 
         await self.post_guild_count()
 
@@ -364,7 +357,7 @@ class EventCog(commands.Cog):
             self.stop()
 
         @discord.ui.button(label='Yes! Remind me', style=discord.ButtonStyle.green)
-        async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
             # add them to a list of user ids
             if "vote_reminder" not in self.bot.vote_data:
                 self.bot.vote_data["vote_reminder"] = []
@@ -378,7 +371,7 @@ class EventCog(commands.Cog):
             await self.on_timeout()
 
         @discord.ui.button(label='No :(', style=discord.ButtonStyle.grey)
-        async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
             await interaction.response.send_message('OK. I will not send any vote reminders.', ephemeral=True)
             await self.on_timeout()
 
@@ -386,29 +379,6 @@ class EventCog(commands.Cog):
     async def on_dbl_test(self, data):
         """ An event that is called whenever someone tests the webhook system for your bot on Top.gg. """
         log.info(f'Received a test vote from {data["user"]}')
-
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        if isinstance(error, commands.NoPrivateMessage):
-            await ctx.author.send('This command cannot be used in private messages.')
-        elif isinstance(error, commands.DisabledCommand):
-            await ctx.author.send('Sorry. This command is disabled and cannot be used.')
-        elif isinstance(error, commands.NotOwner):
-            await ctx.author.send('Sorry. This command can\'t be used by you.')
-
-        elif isinstance(error, commands.CommandInvokeError):
-            original = error.original
-            if not isinstance(original, discord.HTTPException):
-                print(f'Error in {ctx.command.qualified_name}:', file=sys.stderr)
-                traceback.print_tb(original.__traceback__)
-                print(f'{original.__class__.__name__}: {original}', file=sys.stderr)
-
-    async def on_command_tree_error(self, interaction: discord.Interaction,
-                                    command: Optional[Union[Command, ContextMenu]],
-                                    error: discord.app_commands.AppCommandError):
-        print(f'Error in {command.name}:', file=sys.stderr)
-        traceback.print_tb(error.__traceback__)
-        print(f'{error.__class__.__name__}: {error}', file=sys.stderr)
 
 
 async def setup(bot):

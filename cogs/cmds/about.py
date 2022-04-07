@@ -10,8 +10,6 @@ from dateutil.relativedelta import relativedelta
 from discord import app_commands
 from discord.ext import commands
 
-import constants
-
 log = logging.getLogger(__name__)
 
 
@@ -24,18 +22,13 @@ class AboutCommand(commands.Cog):
     async def globalAboutCommand(self, interaction: discord.Interaction):
         await self.handleAboutCommand(interaction)
 
-    @app_commands.command(name='devabout', description='Dev - Shows statistics about the bot itself.')
-    @app_commands.guilds(discord.Object(id=constants.DEV_SERVER_ID))
-    async def devAboutCommand(self, interaction: discord.Interaction):
-        await self.handleAboutCommand(interaction)
-
     async def handleAboutCommand(self, interaction: discord.Interaction):
         """Tells you information about the bot itself """
 
         revision = self.get_last_commits()
-        embed = discord.Embed(description='Latest Changes:\n' + revision)
-        embed.title = 'Official Bot Server Invite'
-        embed.url = 'https://discord.gg/rcUzqaQN8k'
+        embed = discord.Embed(description='**Latest Changes:**\n' + revision)
+        #  embed.title = 'Official Bot Server Invite'
+        #  embed.url = 'https://discord.gg/rcUzqaQN8k'
         embed.colour = discord.Colour.blurple()
 
         owner = self.bot.get_user(self.bot.owner_id)
@@ -97,7 +90,7 @@ class AboutCommand(commands.Cog):
             await self.message.edit(view=None)
 
         @discord.ui.button(label='More Changes', style=discord.ButtonStyle.green)
-        async def moreChanges(self, button: discord.ui.Button, interaction: discord.Interaction):
+        async def moreChanges(self, interaction: discord.Interaction, button: discord.ui.Button):
             revision = self.commandsCog.get_last_commits(count=20)
             embed = discord.Embed(description='Latest 20 GitHub Commits:\n' + revision[:3900])
             await interaction.response.send_message(embed=embed, ephemeral=True)
