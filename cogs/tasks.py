@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 
@@ -24,27 +23,12 @@ class TaskCog(commands.Cog):
     async def backup(self):
         cmd = self.bot.get_command("backup")
         await cmd(None)
-        log.info("[TASK] Completed data backup")
 
     @tasks.loop(minutes=1.0)
     async def updater(self):
-        # save stat_data
-        with open('stats.json', 'w', encoding='utf-8') as f:
-            json.dump(self.bot.stat_data, f, ensure_ascii=False, indent=4)
-            f.close()
-        # log.info("[TASK] Saved stat_data: " + str(self.bot.stat_data))
-
-        # save guild settings
-        with open('guild_settings.json', 'w', encoding='utf-8') as f:
-            json.dump(self.bot.guild_settings, f, ensure_ascii=False, indent=4)
-            f.close()
-        # log.info("[TASk] Saved guild_settings: " + str(self.bot.guild_settings))
-
-        with open('votes.json', 'w', encoding='utf-8') as f:
-            json.dump(self.bot.vote_data, f, ensure_ascii=False, indent=4)
-            f.close()
-        # log.info("[DUMP] Saved vote_data: " + str(self.bot.vote_data))
-
+        cmd = self.bot.get_command("dump")
+        await cmd(None)
+        
         # check if the monthly vote count has reset - at midnight UTC. Updates after the first monthly vote on top.gg
         time_now = discord.utils.utcnow()
         if time_now.day == 1 and time_now.hour == 0 and time_now.minute == 0:
@@ -69,7 +53,7 @@ class TaskCog(commands.Cog):
                             # user not in cache so attempt to retrieve them
                             user = await self.bot.fetch_user(int(discordID))
                             print(f"User was none attempting an API call. User: {user}")
-                            
+
                         if user is not None:
                             try:
                                 await user.send(
