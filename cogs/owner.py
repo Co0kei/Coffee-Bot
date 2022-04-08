@@ -27,8 +27,8 @@ class OwnerCog(commands.Cog):
         self.bot = bot
         self._last_result = None
 
-    def cog_check(self, ctx: Context[BotT]) -> bool:
-        return ctx.author.id == self.bot.owner_id
+    async def cog_check(self, ctx: Context[BotT]) -> bool:
+        return await self.bot.is_owner(ctx.author)
 
     @commands.command(description="Shows all owner help commands")
     async def owner(self, ctx):
@@ -60,70 +60,95 @@ class OwnerCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.is_owner()
     @commands.command(description="Loads a cog")
     async def load(self, ctx, *, module=None):
         """ Load a specific cog """
         if module is None:
-            await ctx.send(f"\U0000274c Enter a cog to load!")
-            return
+            return await ctx.send(f"\U0000274c Enter a cog to load!")
+
+        module = module.lower()
+
+        found = False
+        for file in Path('cogs').glob('**/*.py'):
+            *tree, _ = file.parts
+            if file.stem == module:
+                found = True
+                break
+
+        if not found:
+            return await ctx.send("\U0000274c This cog could not be found!")
         try:
-            await self.bot.load_extension(f'cogs.{module}')
+            await self.bot.load_extension(f"{'.'.join(tree)}.{file.stem}")
             await ctx.send(f"\U00002705 Cog {module} loaded successfully!")
 
         except commands.ExtensionAlreadyLoaded:
             await ctx.send("\U0000274c This cog is already loaded!")
 
-        except commands.ExtensionNotFound:
-            await ctx.send("\U0000274c This cog could not be found!")
-
         except Exception as e:
             traceback.print_exc()
             await ctx.send(f"\U0000274c {e}")
 
-    @commands.is_owner()
     @commands.command(description="Unloads a cog")
     async def unload(self, ctx, *, module=None):
         """ Unload a specific cog """
         if module is None:
-            await ctx.send(f"\U0000274c Enter a cog to unload!")
-            return
+            return await ctx.send(f"\U0000274c Enter a cog to unload!")
+
+        module = module.lower()
+
+        found = False
+        for file in Path('cogs').glob('**/*.py'):
+            *tree, _ = file.parts
+            if file.stem == module:
+                found = True
+                break
+
+        if not found:
+            return await ctx.send("\U0000274c This cog could not be found!")
         try:
-            await self.bot.unload_extension(f'cogs.{module}')
+            await self.bot.unload_extension(f"{'.'.join(tree)}.{file.stem}")
             await ctx.send(f"\U00002705 Cog {module} unloaded successfully!")
 
         except commands.ExtensionNotLoaded:
             await ctx.send("\U0000274c This cog is already unloaded!")
 
-        except commands.ExtensionNotFound:
-            await ctx.send("\U0000274c This cog could not be found!")
-
         except Exception as e:
             traceback.print_exc()
             await ctx.send(f"\U0000274c {e}")
 
-    @commands.is_owner()
     @commands.command(description="Reloads a cog", aliases=["r"])
     async def reload(self, ctx, *, module=None):
         """" Reload a specific cog """
+
+        module = module or self.bot._last_module
+
         if module is None:
-            await ctx.send(f"\U0000274c Enter a cog to reload!")
-            return
+            return await ctx.send(f"\U0000274c Enter a cog to reload!")
+
+        module = module.lower()
+
+        found = False
+        for file in Path('cogs').glob('**/*.py'):
+            *tree, _ = file.parts
+            if file.stem == module:
+                found = True
+                break
+
+        if not found:
+            return await ctx.send("\U0000274c This cog could not be found!")
         try:
-            await self.bot.reload_extension(f"cogs.{module}")
+            await self.bot.reload_extension(f"{'.'.join(tree)}.{file.stem}")
             await ctx.send(f"\U00002705 Successfully reloaded {module}!")
+            self.bot._last_module = file.stem
 
-        except commands.ExtensionNotFound:
-            await ctx.send("\U0000274c This cog could not be found!")
-
-        except commands.ExtensionNotLoaded:
-            await ctx.send("\U0000274c This cog is not loaded!")
+        except commands.ExtensionNotLoaded:  # if not loaded then load
+            await self.bot.load_extension(f"{'.'.join(tree)}.{file.stem}")
+            await ctx.send(f"\U00002705 Successfully loaded {module}!")
 
         except Exception as e:
             traceback.print_exc()
             await ctx.send(f"\U0000274c {e}")
 
-    @commands.is_owner()
     @commands.command(description="Reloads all cogs", aliases=["rall"])
     async def reloadall(self, ctx):
         msg = ""
@@ -133,12 +158,16 @@ class OwnerCog(commands.Cog):
                 await self.bot.reload_extension(f"{'.'.join(tree)}.{file.stem}")
                 msg += f"\U00002705 Successfully reloaded {file}!\n"
 
+            except commands.ExtensionNotLoaded:  # if not loaded then load
+                await self.bot.load_extension(f"{'.'.join(tree)}.{file.stem}")
+                msg += f"\U00002705 Successfully loaded {file}!\n"
+
             except Exception as e:
-                print(f'Failed to reload extension {file}.', file=sys.stderr)
+                log.warning(f'Failed to reload extension {file}.', file=sys.stderr)
                 msg += f"\U0000274c Failed to reload {file} with reason: {e}\n"
                 traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-
-        await ctx.send(msg)
+        if ctx is not None:
+            await ctx.send(msg)
 
     @commands.is_owner()
     @commands.command(description="Saves all data to disk.")
@@ -149,27 +178,21 @@ class OwnerCog(commands.Cog):
             json.dump(self.bot.stat_data, f, ensure_ascii=False, indent=4)
             f.close()
 
-        # log.info("[DUMP] Saved stat_data: " + str(self.bot.stat_data))
-
         # save guild settings
         with open('guild_settings.json', 'w', encoding='utf-8') as f:
             json.dump(self.bot.guild_settings, f, ensure_ascii=False, indent=4)
             f.close()
-
-        # log.info("[DUMP] Saved guild_settings: " + str(self.bot.guild_settings))
 
         # save vote data
         with open('votes.json', 'w', encoding='utf-8') as f:
             json.dump(self.bot.vote_data, f, ensure_ascii=False, indent=4)
             f.close()
 
-        # log.info("[DUMP] Saved vote_data: " + str(self.bot.vote_data))
-
         if ctx is not None:
             await ctx.message.reply("Data saved")
 
     @commands.is_owner()
-    @commands.command(description="Reloads the data in memory by reading from disk")
+    @commands.command(aliases=["loadmemory"], description="Reloads the data in memory by reading from disk")
     async def refreshmemory(self, ctx):
         """ Reload data from disk"""
         with open('stats.json', 'r', encoding='utf-8') as f:
@@ -187,7 +210,8 @@ class OwnerCog(commands.Cog):
             self.bot.vote_data = data  # load vote data
             f.close()
 
-        await ctx.message.reply("Data reloaded")
+        if ctx is not None:
+            await ctx.message.reply("Data reloaded")
 
     # @commands.is_owner()
     # @commands.command(description="Shows 1000 most recent votes for the bot")
@@ -313,13 +337,13 @@ class OwnerCog(commands.Cog):
                 msg += f"\U00002705 Successfully unloaded {file}!\n"
 
             except Exception as e:
-                print(f'Failed to unload extension {file}.', file=sys.stderr)
+                log.warning(f'Failed to unload extension {file}.', file=sys.stderr)
                 msg += f"\U0000274c Failed to unload {file} with reason: {e}\n"
                 traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
 
         await ctx.send(msg)
 
-        await self.bot.close()
+        await self.bot.cslose()
 
     class Confirm(discord.ui.View):
         def __init__(self):
