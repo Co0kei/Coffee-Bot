@@ -58,15 +58,15 @@ class AboutCommand(commands.Cog):
         embed.add_field(name="Latest Commits", value=self.get_last_commits(), inline=False)
 
         bots = sum(u.bot for u in self.bot.users)
-        embed.add_field(name='Members', value=f'{total_members} total\n{total_unique} unique\n{bots} bots')
-        embed.add_field(name='Channels', value=f'{text + voice} total\n{text} text\n{voice} voice')
+        embed.add_field(name='Members', value=f'{total_members:,} total\n{total_unique:,} unique\n{bots:,} bots')
+        embed.add_field(name='Channels', value=f'{text + voice:,} total\n{text:,} text\n{voice:,} voice')
 
         memory_usage = self.process.memory_full_info().uss / 1024 ** 2
         cpu_usage = self.process.cpu_percent() / psutil.cpu_count()
         embed.add_field(name='Process', value=f'{memory_usage:.2f} MB\n{cpu_usage:.2f}% CPU')
 
-        embed.add_field(name='Guilds', value=guilds)
-        embed.add_field(name='Commands Run', value=self.bot.stat_data["commands_used"])
+        embed.add_field(name='Guilds', value=f'{guilds:,}')
+        embed.add_field(name='Commands Run', value=f'{self.bot.stat_data["commands_used"]:,}')
         embed.add_field(name='Launch Time', value=discord.utils.format_dt(self.bot.uptime, "R"))
 
         # embed.add_field(name="Bot Ping", value=f"{self.bot.latency * 1000:.2f}ms")
