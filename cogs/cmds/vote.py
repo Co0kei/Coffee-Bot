@@ -111,19 +111,25 @@ class VoteCommand(commands.Cog):
         @discord.ui.button(label='Vote History', emoji="\U0001fa99", style=discord.ButtonStyle.green)
         async def voteHistory(self, interaction: discord.Interaction, button: discord.ui.Button):
             totalVotes, timesVoted = self.commandsCog.get_total_votes(interaction.user.id)
-            totalPages = int(math.ceil(timesVoted / 10.0))
 
-            view = self.commandsCog.PaginatedVoteHistory(commandsCog=self.commandsCog, totalVotes=totalVotes, timesVoted=timesVoted, totalPages=totalPages)
+            if totalVotes == 0:
+                embed = discord.Embed(description=f'**Vote History**\n\nYou have never voted :(', colour=discord.Colour.dark_gold())
+                return await interaction.response.send_message(embed=embed, ephemeral=True)
 
-            embed = discord.Embed(description=f'**Vote History**\n\nYou have voted {timesVoted} times and now,\ndue to double vote weekends,\nhave a total of {totalVotes} votes!\n\n'
-                                              f'{self.commandsCog.get_vote_history(interaction.user.id)[:3900]}')
-            embed.colour = discord.Colour.dark_gold()
-            embed.set_footer(text=f"『 Page 1/{totalPages}』")
+            else:
+                totalPages = int(math.ceil(timesVoted / 10.0))
 
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+                view = self.commandsCog.PaginatedVoteHistory(commandsCog=self.commandsCog, totalVotes=totalVotes, timesVoted=timesVoted, totalPages=totalPages)
 
-            msg = await interaction.original_message()
-            view.setOriginalMessage(msg)  # pass the original message into the class
+                embed = discord.Embed(description=f'**Vote History**\n\nYou have voted {timesVoted} times and now,\ndue to double vote weekends,\nhave a total of {totalVotes} votes!\n\n'
+                                                  f'{self.commandsCog.get_vote_history(interaction.user.id)[:3900]}')
+                embed.colour = discord.Colour.dark_gold()
+                embed.set_footer(text=f"『 Page 1/{totalPages}』")
+
+                await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+                msg = await interaction.original_message()
+                view.setOriginalMessage(msg)  # pass the original message into the class
 
     class PaginatedVoteHistory(discord.ui.View):
 
