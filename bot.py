@@ -3,9 +3,7 @@ import sys
 import traceback
 from pathlib import Path
 
-import aiohttp
 import discord
-import topgg
 from discord.ext import commands
 
 from constants import *
@@ -41,26 +39,23 @@ async def globalReportUser(interaction: discord.Interaction, member: discord.Mem
 # Events
 @bot.event
 async def on_ready():
-    log.info(f'Connected to {(len(bot.guilds))} Discord Servers.')
-    log.info('Bot online!')
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(bot.guilds)} guilds'))
+    log.info(f'Bot online! Connected to {(len(bot.guilds))} Discord Servers.')
+
+    if not hasattr(bot, 'uptime'):
+        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(bot.guilds)} guilds'))
+        bot.uptime = discord.utils.utcnow()
 
 
 @bot.event
 async def setup_hook():
-    await load_cogs()
-
+    await load_cogs()  # load logging first
     log.info(f'Logged in as {bot.user} (ID: {bot.user.id})')
-
-    bot.hook = discord.Webhook.from_url(WEBHOOK_URL, session=aiohttp.ClientSession(loop=bot.loop))
-    bot.error_hook = discord.Webhook.from_url(ERROR_HOOK_URL, session=aiohttp.ClientSession(loop=bot.loop))
-    bot.uptime = discord.utils.utcnow()
-    bot._last_module = None
-
-    if sys.platform != DEV_PLATFORM:
-        await setup_topgg()
-
     await (bot.get_command("loadmemory"))(None)  # load data into memory
+
+
+@bot.event
+async def close():
+    await super(commands.Bot, bot).close()  # dont eat the super method
 
 
 # Methods
@@ -74,13 +69,6 @@ async def load_cogs():
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
 
 
-async def setup_topgg():
-    # topgg stuff - only run if on productions bot
-    bot.topggpy = topgg.DBLClient(bot, TOPGG_TOKEN)
-    bot.topgg_webhook = topgg.WebhookManager(bot).dbl_webhook(TOPGG_URL, TOPGG_PASSWORD)
-    await bot.topgg_webhook.run(TOPGG_PORT)
-
-
 # Start Bot
 if __name__ == '__main__':
-    bot.run(token)
+    bot.run(token, reconnect=True)
