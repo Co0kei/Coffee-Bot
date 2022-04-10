@@ -12,10 +12,9 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 import discord
+import psutil
 import pygit2
 from discord.ext import commands
-from discord.ext.commands import Context
-from discord.ext.commands._types import BotT
 
 from constants import DEV_SERVER_ID
 
@@ -27,7 +26,7 @@ class OwnerCog(commands.Cog):
         self.bot = bot
         self._last_result = None
 
-    async def cog_check(self, ctx: Context[BotT]) -> bool:
+    async def cog_check(self, ctx) -> bool:
         return await self.bot.is_owner(ctx.author)
 
     @commands.command(description="Shows all owner help commands")
@@ -119,6 +118,9 @@ class OwnerCog(commands.Cog):
     @commands.command(description="Reloads a cog", aliases=["r"])
     async def reload(self, ctx, *, module=None):
         """" Reload a specific cog """
+
+        if not hasattr(self.bot, '_last_module'):
+            self.bot._last_module = None
 
         module = module or self.bot._last_module
 
@@ -287,7 +289,7 @@ class OwnerCog(commands.Cog):
         await ctx.message.reply("Global interaction sync complete:\n" + str(result))
 
     @commands.is_owner()
-    @commands.command(name="stop", description="Gracefully stops the bot")
+    @commands.command(name="stop", aliases=["close"], description="Gracefully stops the bot")
     async def _stop(self, ctx):
 
         # check for vote alerts within the next 2 hours
@@ -343,7 +345,7 @@ class OwnerCog(commands.Cog):
 
         await ctx.send(msg)
 
-        await self.bot.cslose()
+        await self.bot.close()
 
     class Confirm(discord.ui.View):
         def __init__(self):
@@ -430,6 +432,57 @@ class OwnerCog(commands.Cog):
             else:
                 self._last_result = ret
                 await ctx.send(f'```py\n{value}{ret}\n```')
+
+    @commands.is_owner()
+    @commands.command(aliases=["health"], description="Various bot health monitoring tools")
+    async def bothealth(self, ctx):
+        """Various bot health monitoring tools."""
+
+        HEALTHY = discord.Colour(value=0x43B581)
+        UNHEALTHY = discord.Colour(value=0xF04947)
+        WARNING = discord.Colour(value=0xF09E47)
+        total_warnings = 0
+
+        embed = discord.Embed(title='Bot Health Report', colour=HEALTHY)
+        description = []
+
+        try:
+            task_retriever = asyncio.Task.all_tasks
+        except AttributeError:
+            task_retriever = asyncio.all_tasks
+
+        all_tasks = task_retriever(loop=self.bot.loop)
+
+        event_tasks = [
+            t for t in all_tasks
+            if 'Client._run_event' in repr(t) and not t.done()
+        ]
+
+        cogs_directory = os.path.dirname(__file__)
+        tasks_directory = os.path.join('discord', 'ext', 'tasks', '__init__.py')
+        inner_tasks = [
+            t for t in all_tasks
+            if cogs_directory in repr(t) or tasks_directory in repr(t)
+        ]
+
+        bad_inner_tasks = ", ".join(hex(id(t)) for t in inner_tasks if t.done() and t._exception is not None)
+        total_warnings += bool(bad_inner_tasks)
+        embed.add_field(name='Inner Tasks', value=f'Total: {len(inner_tasks)}\nFailed: {bad_inner_tasks or "None"}')
+        embed.add_field(name='Events Waiting', value=f'Total: {len(event_tasks)}', inline=False)
+
+        memory_usage = self.bot.get_cog('AboutCommand').process.memory_full_info().uss / 1024 ** 2
+        cpu_usage = self.bot.get_cog('AboutCommand').process.cpu_percent() / psutil.cpu_count()
+        embed.add_field(name='Process', value=f'{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU', inline=False)
+
+        global_rate_limit = not self.bot.http._global_over.is_set()
+        description.append(f'Global Rate Limit: {global_rate_limit}')
+
+        if global_rate_limit or total_warnings >= 9:
+            embed.colour = UNHEALTHY
+
+        embed.set_footer(text=f'{total_warnings} warning(s)')
+        embed.description = '\n'.join(description)
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):
