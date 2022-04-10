@@ -28,7 +28,7 @@ class TaskCog(commands.Cog):
     async def updater(self):
         cmd = self.bot.get_command("dump")
         await cmd(None)
-        
+
         # check if the monthly vote count has reset - at midnight UTC. Updates after the first monthly vote on top.gg
         time_now = discord.utils.utcnow()
         if time_now.day == 1 and time_now.hour == 0 and time_now.minute == 0:
@@ -48,11 +48,11 @@ class TaskCog(commands.Cog):
                     if difference > 43200:  # num of seconds in 12 hours
                         # if been more than 12 hours - send a reminder
                         user = self.bot.get_user(int(discordID))
-                        print(f"Attempting to send vote reminder. User: {user}")
+                        log.info(f"Attempting to send vote reminder. User: {user}")
                         if user is None:
                             # user not in cache so attempt to retrieve them
                             user = await self.bot.fetch_user(int(discordID))
-                            print(f"User was none attempting an API call. User: {user}")
+                            log.info(f"User was none attempting an API call. User: {user}")
 
                         if user is not None:
                             try:
