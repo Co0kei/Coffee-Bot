@@ -22,6 +22,7 @@ class BWPROCommand(commands.Cog):
 
     @commands.command()
     async def bw(self, ctx, player=None):
+        
         if player is None:
             return await ctx.message.reply("Please enter a player name or UUID!")
 

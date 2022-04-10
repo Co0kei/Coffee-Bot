@@ -65,9 +65,9 @@ class VoteCommand(commands.Cog):
             last_vote = "`None`"
 
         embed.add_field(name="__Your Vote Info__", value=
-        f'Your Coins: **{total_coins}**:coin:\n'
-        f'Vote Streak: **{vote_streak}**\n'
-        f'Total Votes: **{total_votes}**\n'
+        f'Your Coins: **{total_coins:,}**:coin:\n'
+        f'Vote Streak: **{vote_streak:,}**\n'
+        f'Total Votes: **{total_votes:,}**\n'
         f'Last Vote: {last_vote}', inline=False)
 
         # embed.add_field(name="__Your Vote History__", value=f'{formatted}', inline=False)

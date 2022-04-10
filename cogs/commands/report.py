@@ -191,7 +191,6 @@ class ReportCommand(commands.Cog):
     async def handleUserReport(self, interaction: discord.Interaction, member: discord.Member,
                                attachment: discord.Attachment):
 
-        # print(interaction.guild)
         if interaction.guild is None:
             return await interaction.response.send_message("Please use this command in a Discord server.")
 
