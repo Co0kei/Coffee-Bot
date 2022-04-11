@@ -11,7 +11,7 @@ class SettingsCommand(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name='settings', description='Configure how the bot works in your server.')
+    @app_commands.command(name='settings', description='Configure how I work in your server.')
     async def globalSettingsCommand(self, interaction: discord.Interaction):
         await self.handleSettingsCommand(interaction)
 
