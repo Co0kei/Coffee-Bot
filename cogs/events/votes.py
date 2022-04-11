@@ -25,11 +25,12 @@ class VoteCog(commands.Cog):
 
     async def cog_unload(self) -> None:
         await self.session.close()
+        await self.topgg_webhook.close()
 
     async def setup_topgg(self):
         self.bot.topggpy = topgg.DBLClient(self.bot, TOPGG_TOKEN)
-        topgg_webhook = topgg.WebhookManager(self.bot).dbl_webhook(TOPGG_URL, TOPGG_PASSWORD)
-        await topgg_webhook.run(TOPGG_PORT)
+        self.topgg_webhook = topgg.WebhookManager(self.bot).dbl_webhook(TOPGG_URL, TOPGG_PASSWORD)
+        await self.topgg_webhook.run(TOPGG_PORT)
 
     @commands.Cog.listener()
     async def on_dbl_vote(self, data):
