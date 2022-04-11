@@ -14,7 +14,7 @@ class VoteCommand(commands.Cog):
     def __init__(self, bot) -> None:
         self.bot = bot
 
-    @app_commands.command(name='vote', description='Help more people find me and earn coins!')
+    @app_commands.command(name='vote', description='Help more servers to find me, and earn some coins!')
     async def globalVoteCommand(self, interaction: discord.Interaction):
         await self.handleVoteCommand(interaction)
 

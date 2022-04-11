@@ -11,7 +11,7 @@ class HelpCommand(commands.Cog):
     def __init__(self, bot) -> None:
         self.bot = bot
 
-    @app_commands.command(name='help', description='Discover what I can do.')
+    @app_commands.command(name='help', description='Discover what I can do!')
     async def globalHelpCommand(self, interaction: discord.Interaction):
         await self.handleHelpCommand(interaction)
 

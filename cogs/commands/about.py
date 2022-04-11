@@ -20,7 +20,7 @@ class AboutCommand(commands.Cog):
         self.bot = bot
         self.process = psutil.Process()
 
-    @app_commands.command(name='about', description='Shows statistics about me.')
+    @app_commands.command(name='about', description='Show statistics about me.')
     async def globalAboutCommand(self, interaction: discord.Interaction):
         await self.handleAboutCommand(interaction)
 
