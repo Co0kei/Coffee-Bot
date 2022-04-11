@@ -14,7 +14,7 @@ class VoteCommand(commands.Cog):
     def __init__(self, bot) -> None:
         self.bot = bot
 
-    @app_commands.command(name='vote', description='Help more people discover Coffee Bot and earn coins!')
+    @app_commands.command(name='vote', description='Help more people find me and earn coins!')
     async def globalVoteCommand(self, interaction: discord.Interaction):
         await self.handleVoteCommand(interaction)
 
@@ -108,12 +108,12 @@ class VoteCommand(commands.Cog):
                 await interaction.response.send_message("Sorry, you cannot use this.", ephemeral=True)
                 return False
 
-        @discord.ui.button(label='Vote History', emoji="\U0001fa99", style=discord.ButtonStyle.green)
+        @discord.ui.button(label='Your Vote History', emoji="\U0001fa99", style=discord.ButtonStyle.green)
         async def voteHistory(self, interaction: discord.Interaction, button: discord.ui.Button):
             totalVotes, timesVoted = self.commandsCog.get_total_votes(interaction.user.id)
 
             if totalVotes == 0:
-                embed = discord.Embed(description=f'**Vote History**\n\nYou have never voted :(', colour=discord.Colour.dark_gold())
+                embed = discord.Embed(title="Your Vote History", description=f'You have never voted :(', colour=discord.Colour.dark_gold())
                 return await interaction.response.send_message(embed=embed, ephemeral=True)
 
             else:
@@ -121,8 +121,8 @@ class VoteCommand(commands.Cog):
 
                 view = self.commandsCog.PaginatedVoteHistory(commandsCog=self.commandsCog, totalVotes=totalVotes, timesVoted=timesVoted, totalPages=totalPages)
 
-                embed = discord.Embed(description=f'**Vote History**\n\nYou have voted {timesVoted} times and now,\ndue to double vote weekends,\nhave a total of {totalVotes} votes!\n\n'
-                                                  f'{self.commandsCog.get_vote_history(interaction.user.id)[:3900]}')
+                embed = discord.Embed(title="Your Vote History", description=f'You have voted {timesVoted} times and now,\ndue to double vote weekends,\nhave a total of {totalVotes} votes!\n\n'
+                                                                             f'{self.commandsCog.get_vote_history(interaction.user.id)[:3900]}')
                 embed.colour = discord.Colour.dark_gold()
                 embed.set_footer(text=f"『 Page 1/{totalPages}』")
 
@@ -130,6 +130,56 @@ class VoteCommand(commands.Cog):
 
                 msg = await interaction.original_message()
                 view.setOriginalMessage(msg)  # pass the original message into the class
+
+        @discord.ui.button(label='Top Voters', emoji="\U0001f31f", style=discord.ButtonStyle.green)
+        async def topVoters(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+            discord_list = []
+            votes_list = []
+            coins_list = []
+
+            for item in self.commandsCog.bot.vote_data:
+                if item == "vote_reminder":
+                    continue
+
+                vote_history: list = self.commandsCog.bot.vote_data[item]["vote_history"]
+
+                total_votes = 0
+
+                for vote in vote_history:
+                    if vote["is_weekend"]:
+                        total_votes += 2
+                    else:
+                        total_votes += 1
+
+                total_coins = sum([element["coins"] for element in vote_history])
+
+                user = self.commandsCog.bot.get_user(int(item))
+
+                if user is None:
+                    user = await self.commandsCog.bot.fetch_user(int(item))
+
+                if user is not None:
+                    discord_list.append(user)
+                    votes_list.append(total_votes)
+                    coins_list.append(total_coins)
+
+            data_sort = [list(a) for a in zip(discord_list, votes_list, coins_list)]
+            list4 = sorted(data_sort, key=lambda x: x[2], reverse=True)
+            discordID_list, votes_list, coins_list = map(list, zip(*list4))
+
+            if len(discordID_list) >= 10:
+                iteratingIndex = 10
+            else:
+                iteratingIndex = len(discordID_list)
+
+            embed = discord.Embed(title="Top Voters", colour=discord.Colour.dark_gold())
+            msg = ""
+            for i in range(iteratingIndex):
+                msg += f"`#{i + 1}` **{discord_list[i]}** Votes: **{votes_list[i]:,}** | Coins: **{coins_list[i]:,}**:coin:\n"
+
+            embed.description = msg
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
     class PaginatedVoteHistory(discord.ui.View):
 
@@ -160,8 +210,8 @@ class VoteCommand(commands.Cog):
             else:
                 iteratingIndex = self.totalVotes - ((self.page - 1) * 10)
 
-            embed = discord.Embed(description=f'**Vote History**\n\nYou have voted {self.timesVoted} times and now,\ndue to double vote weekends,\nhave a total of {self.totalVotes} votes!\n\n'
-                                              f'{self.commandsCog.get_vote_history(interaction.user.id, start=(self.page - 1) * 10, end=(self.page - 1) * 10 + iteratingIndex)[:3900]}')
+            embed = discord.Embed(title="Your Vote History", description=f'You have voted {self.timesVoted} times and now,\ndue to double vote weekends,\nhave a total of {self.totalVotes} votes!\n\n'
+                                                                         f'{self.commandsCog.get_vote_history(interaction.user.id, start=(self.page - 1) * 10, end=(self.page - 1) * 10 + iteratingIndex)[:3900]}')
             embed.colour = discord.Colour.dark_gold()
             embed.set_footer(text=f"『 Page {self.page}/{self.totalPages}』")
 
@@ -179,8 +229,8 @@ class VoteCommand(commands.Cog):
             else:
                 iteratingIndex = self.totalVotes - ((self.page - 1) * 10)
 
-            embed = discord.Embed(description=f'**Vote History**\n\nYou have voted {self.timesVoted} times and now,\ndue to double vote weekends,\nhave a total of {self.totalVotes} votes!\n\n'
-                                              f'{self.commandsCog.get_vote_history(interaction.user.id, start=(self.page - 1) * 10, end=(self.page - 1) * 10 + iteratingIndex)[:3900]}')
+            embed = discord.Embed(title="Your Vote History", description=f'You have voted {self.timesVoted} times and now,\ndue to double vote weekends,\nhave a total of {self.totalVotes} votes!\n\n'
+                                                                         f'{self.commandsCog.get_vote_history(interaction.user.id, start=(self.page - 1) * 10, end=(self.page - 1) * 10 + iteratingIndex)[:3900]}')
             embed.colour = discord.Colour.dark_gold()
             embed.set_footer(text=f"『 Page {self.page}/{self.totalPages}』")
 
