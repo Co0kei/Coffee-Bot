@@ -66,9 +66,12 @@ class ErrorCog(commands.Cog):
             original = error.original
 
             if not isinstance(original, discord.HTTPException):
-                exc = ''.join(traceback.format_exception(type(error), error, error.__traceback__, chain=False))
+
+                exc = ''.join(traceback.format_exception(type(error), error, error.__traceback__, chain=True))
 
                 log.error(f'Error in command \'{ctx.command.qualified_name}\': {original}\n{exc}')
+
+                exc = ''.join(traceback.format_exception(type(error), error, error.__traceback__, chain=False))
 
                 await ctx.send("Sorry, an unexpected error has occured. I will notify the bot developer now.")
 
@@ -97,9 +100,11 @@ class ErrorCog(commands.Cog):
             log.error(f'Command Tree Error: {traceback.format_exc()}')
             return
 
-        exc = ''.join(traceback.format_exception(type(error), error, error.__traceback__, chain=False))
+        exc = ''.join(traceback.format_exception(type(error), error, error.__traceback__, chain=True))
 
         log.error(f'Error in Command Tree command \'{command.name}\':\n{exc}')
+
+        exc = ''.join(traceback.format_exception(type(error), error, error.__traceback__, chain=False))
 
         if interaction.response.is_done():
             try:
