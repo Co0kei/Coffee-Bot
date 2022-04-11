@@ -23,13 +23,13 @@ class JoinLeaveCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
-        log.info(f'I have been invited to {guild.name} ({guild.id}) which has {len(guild.members)} members.')
+        log.info(f'I have been invited to {guild.name} ({guild.id}) which has {len(guild.members):,} members.')
         e = discord.Embed(colour=0x53dda4, title='New Guild')  # green colour
         await self.send_guild_stats(e, guild)
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
-        log.info(f'I have been removed from {guild.name} ({guild.id}) which has {len(guild.members)} members.')
+        log.info(f'I have been removed from {guild.name} ({guild.id}) which has {len(guild.members):,} members.')
         e = discord.Embed(colour=0xdd5f53, title='Left Guild')  # red colour
         await self.send_guild_stats(e, guild)
 
@@ -40,8 +40,8 @@ class JoinLeaveCog(commands.Cog):
         e.add_field(name='Owner', value=f'{guild.owner} (ID: {guild.owner_id})')
         bots = sum(m.bot for m in guild.members)
         total = guild.member_count
-        e.add_field(name='Members', value=str(total))
-        e.add_field(name='Bots', value=f'{bots} ({bots / total:.2%})')
+        e.add_field(name='Members', value=f"{total:,}")
+        e.add_field(name='Bots', value=f'{bots:,} ({bots / total:.2%})')
 
         if guild.icon:
             e.set_thumbnail(url=guild.icon.url)
@@ -55,7 +55,7 @@ class JoinLeaveCog(commands.Cog):
 
         if sys.platform != DEV_PLATFORM:
             try:
-                await self.bot.topggpy.send_guild_stats(shard_count=self.bot.shard_count)
+                await self.bot.topggpy.post_guild_count(shard_count=self.bot.shard_count)
                 log.info(f"Posted to top.gg: server count ({self.bot.topggpy.guild_count}), shard count ({self.bot.shard_count})")
 
             except Exception as e:

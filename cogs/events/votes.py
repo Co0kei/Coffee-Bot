@@ -137,7 +137,7 @@ class VoteCog(commands.Cog):
             log.info(f'Received a vote from {discordID}')
 
         embed.add_field(name='Coins received', value=f'{coins}:coin:', inline=False)
-        embed.add_field(name='Total Coins', value=f'{total_coins}:coin:', inline=False)
+        embed.add_field(name='Total Coins', value=f'{total_coins:,}:coin:', inline=False)
         embed.add_field(name='Streak message', value=f'{streak_message}', inline=False)
         embed.timestamp = discord.utils.utcnow()
 

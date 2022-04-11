@@ -33,7 +33,7 @@ class CommandCog(commands.Cog):
                 guild = None
                 destination = 'Private Message'
             else:
-                guild = f'{interaction.guild.name} (ID: {interaction.guild.id}) ({len(interaction.guild.members)} members)'
+                guild = f'{interaction.guild.name} (ID: {interaction.guild.id}) ({len(interaction.guild.members):,} members)'
                 destination = f'#{interaction.channel}'
 
             self.bot.stat_data["commands_used"] += 1
@@ -42,13 +42,14 @@ class CommandCog(commands.Cog):
 
             if command_type == 1:  # slash command
                 # application_command_type = "Slash"
-                embed.add_field(name='Slash Command', value=f'/{command_name}', inline=False)
+                command_name = f"/{command_name}"
+                embed.add_field(name='Slash Command', value=f'{command_name}', inline=False)
                 if "options" in interaction.data:
                     params = interaction.data["options"]
                     msg = ""
                     for param in params:
                         paramType = str(discord.AppCommandOptionType(value=param["type"])).split(".")[1]
-                        msg += f"Name: {param['name']} | Type: {paramType} | Value {param['value']}"
+                        msg += f"Name: {param['name']} | Type: {paramType} | Value {param['value']}\n"
                     embed.add_field(name='Parameters', value=msg)
 
             elif command_type == 2:  # user context menu
@@ -63,13 +64,16 @@ class CommandCog(commands.Cog):
                 # application_command_type = "Unknown type"
                 embed.add_field(name='Unknown Type Command', value=f'{command_name}', inline=False)
 
-            log.info(f'{interaction.user} in {destination}: /{command_name}')
+            log.info(f'{interaction.user} in {destination}: {command_name}')
 
             embed.set_author(name=f'Command ran by {user}', icon_url=interaction.user.display_avatar.url)
             embed.add_field(name='Guild', value=f'{guild}', inline=False)
             embed.add_field(name='Location', value=f'{destination}', inline=False)
             embed.timestamp = discord.utils.utcnow()
-            embed.set_footer(text=f'Total commands ran: {self.bot.stat_data["commands_used"]}')
+            embed.set_footer(text=f'Total commands ran: {self.bot.stat_data["commands_used"]:,}')
+
+            if interaction.guild is not None and interaction.guild.id == DEV_SERVER_ID:
+                return
 
             if sys.platform != DEV_PLATFORM:
                 await self.command_hook.send(embed=embed)
@@ -84,7 +88,7 @@ class CommandCog(commands.Cog):
             guild = None
             destination = 'Private Message'
         else:
-            guild = f'{ctx.guild.name} (ID: {ctx.guild.id}) ({len(ctx.guild.members)} members)'
+            guild = f'{ctx.guild.name} (ID: {ctx.guild.id}) ({len(ctx.guild.members):,} members)'
             destination = f'#{message.channel}'
 
         self.bot.stat_data["commands_used"] += 1
@@ -98,7 +102,10 @@ class CommandCog(commands.Cog):
         embed.add_field(name='Location', value=f'{destination}', inline=False)
 
         embed.timestamp = discord.utils.utcnow()
-        embed.set_footer(text=f'Total commands ran: {self.bot.stat_data["commands_used"]}')
+        embed.set_footer(text=f'Total commands ran: {self.bot.stat_data["commands_used"]:,}')
+
+        if ctx.guild is not None and ctx.guild.id == DEV_SERVER_ID:
+            return
 
         if sys.platform != DEV_PLATFORM:
             await self.command_hook.send(embed=embed)

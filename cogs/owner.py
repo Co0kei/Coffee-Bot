@@ -16,7 +16,7 @@ import psutil
 import pygit2
 from discord.ext import commands
 
-from constants import DEV_SERVER_ID
+from constants import DEV_SERVER_ID, DEV_PLATFORM
 
 log = logging.getLogger(__name__)
 
@@ -367,9 +367,8 @@ class OwnerCog(commands.Cog):
     @commands.is_owner()
     @commands.command(name="clonerepo", description="Pulls github commits")
     async def forceRefreshGithub(self, ctx):
-        if sys.platform == "win32":
-            await ctx.send("dont need to")
-            return
+        if sys.platform == DEV_PLATFORM:
+            return await ctx.send("Don't need to.")
         try:
             shutil.rmtree(".git")
         except:
