@@ -165,7 +165,7 @@ class OwnerCog(commands.Cog):
                 msg += f"\U00002705 Successfully loaded {file}!\n"
 
             except Exception as e:
-                log.warning(f'Failed to reload extension {file}.', file=sys.stderr)
+                log.warning(f'Failed to reload extension {file}.')
                 msg += f"\U0000274c Failed to reload {file} with reason: {e}\n"
                 traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
         if ctx is not None:
@@ -339,7 +339,7 @@ class OwnerCog(commands.Cog):
                 msg += f"\U00002705 Successfully unloaded {file}!\n"
 
             except Exception as e:
-                log.warning(f'Failed to unload extension {file}.', file=sys.stderr)
+                log.warning(f'Failed to unload extension {file}.')
                 msg += f"\U0000274c Failed to unload {file} with reason: {e}\n"
                 traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
 
