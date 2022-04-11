@@ -20,18 +20,17 @@ class VoteCog(commands.Cog):
     async def cog_load(self) -> None:
         self.session = aiohttp.ClientSession(loop=self.bot.loop)
         self.vote_hook = discord.Webhook.from_url(VOTE_HOOK_URL, session=self.session)
-        if sys.platform != DEV_PLATFORM:
-            await self.setup_topgg()
+
+        if sys.platform != DEV_PLATFORM:  # top.gg things
+            self.bot.topggpy = topgg.DBLClient(self.bot, TOPGG_TOKEN)
+            self.topgg_webhook = topgg.WebhookManager(self.bot).dbl_webhook(TOPGG_URL, TOPGG_PASSWORD)
+            await self.topgg_webhook.run(TOPGG_PORT)
 
     async def cog_unload(self) -> None:
         await self.session.close()
+        await self.bot.topggpy.close()
         await self.topgg_webhook.close()
-
-    async def setup_topgg(self):
-        self.bot.topggpy = topgg.DBLClient(self.bot, TOPGG_TOKEN)
-        self.topgg_webhook = topgg.WebhookManager(self.bot).dbl_webhook(TOPGG_URL, TOPGG_PASSWORD)
-        await self.topgg_webhook.run(TOPGG_PORT)
-
+        
     @commands.Cog.listener()
     async def on_dbl_vote(self, data):
         """ An event that is called whenever someone votes for the bot on Top.gg. """
