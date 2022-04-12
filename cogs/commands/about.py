@@ -63,13 +63,21 @@ class AboutCommand(commands.Cog):
 
         memory_usage = self.process.memory_full_info().uss / 1024 ** 2
         cpu_usage = self.process.cpu_percent() / psutil.cpu_count()
-        embed.add_field(name='Process', value=f'{memory_usage:.2f} MB\n{cpu_usage:.2f}% CPU')
+
+        delta = discord.utils.utcnow() - self.bot.uptime
+        minutes = delta.total_seconds() / 60
+        total = sum(self.bot.socket_stats.values())
+        cpm = total / minutes
+
+        embed.add_field(name='Process', value=f'{memory_usage:.2f} MB\n{cpu_usage:.2f}% CPU\n{cpm:.2f} EPM')
 
         embed.add_field(name='Guilds', value=f'{guilds:,}')
         embed.add_field(name='Commands Run', value=f'{self.bot.stat_data["commands_used"]:,}')
         embed.add_field(name='Launch Time', value=discord.utils.format_dt(self.bot.uptime, "R"))
 
         # embed.add_field(name="Bot Ping", value=f"{self.bot.latency * 1000:.2f}ms")
+        # embed.add_field(name="Socket Events", value=f"{cpm:.2f}/minute")
+
         version = pkg_resources.get_distribution('discord.py').version
         embed.set_footer(text=f'Made with discord.py v{version}', icon_url='http://i.imgur.com/5BFecvA.png')
         embed.timestamp = discord.utils.utcnow()
