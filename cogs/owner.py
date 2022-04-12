@@ -504,6 +504,46 @@ class OwnerCog(commands.Cog):
         embed.description = '\n'.join(description)
         await ctx.send(embed=embed)
 
+    @commands.is_owner()
+    @commands.command(aliases=['socket'], description="Shows gateway events")
+    async def socketstats(self, ctx):
+        delta = discord.utils.utcnow() - self.bot.uptime
+        minutes = delta.total_seconds() / 60
+        total = sum(self.bot.socket_stats.values())
+        cpm = total / minutes
+        await ctx.send(f'{total} socket events observed ({cpm:.2f}/minute):\n{self.bot.socket_stats}')
+
+    @commands.is_owner()
+    @commands.command(aliases=['cancel_task'], description="Debug a task by a memory location")
+    async def debug_task(self, ctx, memory_id: hex_value):
+        """Debug a task by a memory location."""
+
+        def object_at(addr):
+            for o in gc.get_objects():
+                if id(o) == addr:
+                    return o
+            return None
+
+        task = object_at(memory_id)
+        if task is None or not isinstance(task, asyncio.Task):
+            return await ctx.send(f'Could not find Task object at {hex(memory_id)}.')
+
+        if ctx.invoked_with == 'cancel_task':
+            task.cancel()
+            return await ctx.send(f'Cancelled task object {task!r}.')
+
+        paginator = commands.Paginator(prefix='```py')
+        fp = io.StringIO()
+        frames = len(task.get_stack())
+        paginator.add_line(f'# Total Frames: {frames}')
+        task.print_stack(file=fp)
+
+        for line in fp.getvalue().splitlines():
+            paginator.add_line(line)
+
+        for page in paginator.pages:
+            await ctx.send(page)
+
 
 async def setup(bot):
     await bot.add_cog(OwnerCog(bot))
