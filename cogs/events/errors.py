@@ -2,9 +2,9 @@ import logging
 import sys
 import textwrap
 import traceback
+from io import BytesIO
 from typing import Optional, Union
 
-import aiohttp
 import discord
 from discord.app_commands import ContextMenu, Command
 from discord.ext import commands
@@ -21,11 +21,7 @@ class ErrorCog(commands.Cog):
         bot.on_error = self.on_error
 
     async def cog_load(self) -> None:
-        self.session = aiohttp.ClientSession(loop=self.bot.loop)
-        self.error_hook = discord.Webhook.from_url(ERROR_HOOK_URL, session=self.session)
-
-    async def cog_unload(self) -> None:
-        await self.session.close()
+        self.error_hook = discord.Webhook.from_url(ERROR_HOOK_URL, session=self.bot.session)
 
     async def on_error(self, event, *args, **kwargs):
 

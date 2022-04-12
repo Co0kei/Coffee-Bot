@@ -3,6 +3,7 @@ import sys
 import traceback
 from pathlib import Path
 
+import aiohttp
 import discord
 from discord.ext import commands
 
@@ -42,12 +43,13 @@ async def on_ready():
     log.info(f'Bot online! Connected to {(len(bot.guilds))} Discord Servers.')
 
     if not hasattr(bot, 'uptime'):
-        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(bot.guilds)} guilds'))
         bot.uptime = discord.utils.utcnow()
+        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(bot.guilds)} guilds'))
 
 
 @bot.event
 async def setup_hook():
+    bot.session = aiohttp.ClientSession(loop=bot.loop)
     await load_cogs()  # load logging first
     log.info(f'Logged in as {bot.user} (ID: {bot.user.id})')
     await (bot.get_command("loadmemory"))(None)  # load data into memory
@@ -55,6 +57,7 @@ async def setup_hook():
 
 @bot.event
 async def close():
+    await bot.session.close()
     await super(commands.Bot, bot).close()  # dont eat the super method
 
 
