@@ -26,9 +26,9 @@ class ErrorCog(commands.Cog):
     async def on_error(self, event, *args, **kwargs):
 
         (exc_type, exc, tb) = sys.exc_info()
-        trace = "".join(traceback.format_exception(exc_type, exc, tb))
+        exc = ''.join(traceback.format_exception(exc_type, exc, tb, chain=True))
 
-        log.error(f'Error in event \'{event}\':\n{trace}')
+        log.error(f'Error in event \'{event}\':\n{exc}')
 
         # Silence command errors that somehow get bubbled up far enough here
         if isinstance(exc, commands.CommandInvokeError):
@@ -37,7 +37,7 @@ class ErrorCog(commands.Cog):
         e = discord.Embed(title='Event Error', colour=0xa32952)
         e.add_field(name='Event', value=event)
 
-        e.description = f'```py\n{trace}\n```'
+        # e.description = f'```py\n{trace}\n```'
         e.timestamp = discord.utils.utcnow()
 
         args_str = ['```py']
@@ -46,8 +46,12 @@ class ErrorCog(commands.Cog):
         args_str.append('```')
         e.add_field(name='Args', value='\n'.join(args_str), inline=False)
 
+        content = exc
+        buffer = BytesIO(content.encode('utf-8'))
+        file = discord.File(fp=buffer, filename='error.txt')
+
         if sys.platform != DEV_PLATFORM:
-            await self.error_hook.send(embed=e)
+            await self.error_hook.send(embed=e, file=file)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -67,9 +71,7 @@ class ErrorCog(commands.Cog):
 
                 log.error(f'Error in command \'{ctx.command.qualified_name}\': {original}\n{exc}')
 
-                exc = ''.join(traceback.format_exception(type(error), error, error.__traceback__, chain=False))
-
-                await ctx.send("Sorry, an unexpected error has occured. I will notify the bot developer now.")
+                await ctx.message.reply("Sorry, an unexpected error has occured. I will notify the bot developer now.")
 
                 e = discord.Embed(title='Command Error', colour=0xcc3366)
                 e.add_field(name='Name', value=ctx.command.qualified_name)
@@ -82,11 +84,15 @@ class ErrorCog(commands.Cog):
                 e.add_field(name='Location', value=fmt, inline=False)
                 e.add_field(name='Content', value=textwrap.shorten(ctx.message.content, width=512))
 
-                e.description = f'```py\n{exc}\n```'
+                # e.description = f'```py\n{exc}\n```'
                 e.timestamp = discord.utils.utcnow()
 
+                content = exc
+                buffer = BytesIO(content.encode('utf-8'))
+                file = discord.File(fp=buffer, filename='error.txt')
+
                 if sys.platform != DEV_PLATFORM:
-                    await self.error_hook.send(embed=e)
+                    await self.error_hook.send(embed=e, file=file)
 
     async def on_command_tree_error(self, interaction: discord.Interaction,
                                     command: Optional[Union[Command, ContextMenu]],
@@ -99,8 +105,6 @@ class ErrorCog(commands.Cog):
         exc = ''.join(traceback.format_exception(type(error), error, error.__traceback__, chain=True))
 
         log.error(f'Error in Command Tree command \'{command.name}\':\n{exc}')
-
-        exc = ''.join(traceback.format_exception(type(error), error, error.__traceback__, chain=False))
 
         if interaction.response.is_done():
             try:
@@ -138,11 +142,15 @@ class ErrorCog(commands.Cog):
 
         e.add_field(name='Command Type', value=application_command_type)
 
-        e.description = f'```py\n{exc}\n```'
+        # e.description = f'```py\n{exc}\n```'
         e.timestamp = discord.utils.utcnow()
 
+        content = exc
+        buffer = BytesIO(content.encode('utf-8'))
+        file = discord.File(fp=buffer, filename='error.txt')
+
         if sys.platform != DEV_PLATFORM:
-            await self.error_hook.send(embed=e)
+            await self.error_hook.send(embed=e, file=file)
 
 
 async def setup(bot):
