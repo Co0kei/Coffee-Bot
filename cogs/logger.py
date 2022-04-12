@@ -21,7 +21,7 @@ class LoggerCog(commands.Cog):
                     or record.getMessage().startswith('Websocket closed'):
                 return False  # dont log it
             return True
-            
+
     async def cog_load(self):
         logging.basicConfig(
             level=logging.INFO,
@@ -30,9 +30,7 @@ class LoggerCog(commands.Cog):
 
         logging.getLogger('discord.gateway').addFilter(self.LoggingFilter())
         logging.getLogger('discord.client').addFilter(self.LoggingFilter())
-
-    async def cog_unload(self):
-        pass
+        logging.getLogger('aiohttp.access').setLevel("WARNING")
 
 
 async def setup(bot):
