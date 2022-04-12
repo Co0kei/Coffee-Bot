@@ -1,4 +1,5 @@
 import asyncio
+import gc
 import io
 import json
 import logging
@@ -21,10 +22,15 @@ from constants import DEV_SERVER_ID, DEV_PLATFORM
 log = logging.getLogger(__name__)
 
 
+def hex_value(arg):
+    return int(arg, base=16)
+
+
 class OwnerCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._last_result = None
+        self.lock = asyncio.Lock()
 
     async def cog_check(self, ctx) -> bool:
         return await self.bot.is_owner(ctx.author)
@@ -176,44 +182,53 @@ class OwnerCog(commands.Cog):
     async def dump(self, ctx):
         """ Save data to disk """
 
-        with open('stats.json', 'w', encoding='utf-8') as f:
-            json.dump(self.bot.stat_data, f, ensure_ascii=False, indent=4)
-            f.close()
+        def _dump():
+            with open('stats.json', 'w', encoding='utf-8') as f:
+                json.dump(self.bot.stat_data, f, ensure_ascii=False, indent=4)
+                f.close()
 
-        # save guild settings
-        with open('guild_settings.json', 'w', encoding='utf-8') as f:
-            json.dump(self.bot.guild_settings, f, ensure_ascii=False, indent=4)
-            f.close()
+            # save guild settings
+            with open('guild_settings.json', 'w', encoding='utf-8') as f:
+                json.dump(self.bot.guild_settings, f, ensure_ascii=False, indent=4)
+                f.close()
 
-        # save vote data
-        with open('votes.json', 'w', encoding='utf-8') as f:
-            json.dump(self.bot.vote_data, f, ensure_ascii=False, indent=4)
-            f.close()
+            # save vote data
+            with open('votes.json', 'w', encoding='utf-8') as f:
+                json.dump(self.bot.vote_data, f, ensure_ascii=False, indent=4)
+                f.close()
 
-        if ctx is not None:
-            await ctx.message.reply("Data saved")
+        async with self.lock:
+            await self.bot.loop.run_in_executor(None, _dump)
+
+            if ctx is not None:
+                await ctx.message.reply("Data saved")
 
     @commands.is_owner()
     @commands.command(aliases=["loadmemory"], description="Reloads the data in memory by reading from disk")
     async def refreshmemory(self, ctx):
         """ Reload data from disk"""
-        with open('stats.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            self.bot.stat_data = data
-            f.close()
 
-        with open('guild_settings.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            self.bot.guild_settings = data  # load guild settings
-            f.close()
+        def _load():
+            with open('stats.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.bot.stat_data = data
+                f.close()
 
-        with open('votes.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            self.bot.vote_data = data  # load vote data
-            f.close()
+            with open('guild_settings.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.bot.guild_settings = data  # load guild settings
+                f.close()
 
-        if ctx is not None:
-            await ctx.message.reply("Data reloaded")
+            with open('votes.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.bot.vote_data = data  # load vote data
+                f.close()
+
+        async with self.lock:
+            await self.bot.loop.run_in_executor(None, _load)
+
+            if ctx is not None:
+                await ctx.message.reply("Data reloaded")
 
     # @commands.is_owner()
     # @commands.command(description="Shows 1000 most recent votes for the bot")
@@ -227,26 +242,25 @@ class OwnerCog(commands.Cog):
     #         peoplethatvoted.append(username)
     #
     #     await ctx.send(f'Bot Vote History:\n' + "\n".join(peoplethatvoted))
-    #
-    # @commands.is_owner()
-    # @commands.command(description="Manually update the bots server and shard count to top.gg")
-    # async def updatetopgg(self, ctx):
-    #     await self.bot.get_cog("EventCog").post_guild_count()
-    #     await ctx.message.reply("Done")
 
     @commands.is_owner()
     @commands.command(name="backup", description="Backups files")
     async def backup(self, ctx):
-        files = ['guild_settings.json', 'stats.json', 'votes.json']
 
-        shutil.rmtree("backups")
-        os.mkdir('backups')
+        def _backup():
+            files = ['guild_settings.json', 'stats.json', 'votes.json']
 
-        for f in files:
-            shutil.copy(f, 'backups')
+            shutil.rmtree("backups")
+            os.mkdir('backups')
 
-        if ctx is not None:
-            await ctx.reply("Done")
+            for f in files:
+                shutil.copy(f, 'backups')
+
+        async with self.lock:
+            await self.bot.loop.run_in_executor(None, _backup)
+
+            if ctx is not None:
+                await ctx.reply("Done")
 
     @commands.is_owner()
     @commands.command(description="Simulate a player voting. Used for testing purposes")
@@ -365,16 +379,23 @@ class OwnerCog(commands.Cog):
             self.stop()
 
     @commands.is_owner()
-    @commands.command(name="clonerepo", description="Pulls github commits")
+    @commands.command(name="clonerepo", description="Pulls from GitHub")
     async def forceRefreshGithub(self, ctx):
         if sys.platform == DEV_PLATFORM:
             return await ctx.send("Don't need to.")
-        try:
-            shutil.rmtree(".git")
-        except:
-            pass
-        repo = pygit2.clone_repository("https://github.com/Co0kei/Coffee-Bot", ".git", bare=True)
-        await ctx.send(repo)
+
+        def _pull():
+            try:
+                shutil.rmtree(".git")
+            except:
+                pass
+            return pygit2.clone_repository("https://github.com/Co0kei/Coffee-Bot", ".git", bare=True)
+
+        async with self.lock:
+            repo = await self.bot.loop.run_in_executor(None, _pull)
+
+            if ctx is not None:
+                await ctx.send(repo)
 
     def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
