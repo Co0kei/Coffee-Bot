@@ -13,16 +13,9 @@ class TaskCog(commands.Cog):
 
     async def cog_load(self):
         self.updater.start()
-        self.backup.start()
 
     async def cog_unload(self):
         self.updater.cancel()
-        self.backup.cancel()
-
-    @tasks.loop(hours=24)
-    async def backup(self):
-        cmd = self.bot.get_command("backup")
-        await cmd(None)
 
     @tasks.loop(minutes=1.0)
     async def updater(self):
@@ -35,6 +28,12 @@ class TaskCog(commands.Cog):
             # it is midnight on first day of month so reset monthly votes!
             self.bot.stat_data["monthly_votes"] = 0
             log.info("Reset monthly top.gg votes.")
+
+        # Do backup once per day
+        if time_now.hour == 0 and time_now.minute == 0:
+            cmd = self.bot.get_command("backup")
+            await cmd(None)
+            log.info("Completed data backup.")
 
         # check if there are any vote reminders to send!
         current_time: int = int(time.time())
