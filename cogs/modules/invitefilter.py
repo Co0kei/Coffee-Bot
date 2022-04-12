@@ -19,13 +19,13 @@ class InviteFilterCog(commands.Cog):
                 mod_log_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["mod_log_channel"])
         return mod_log_channel
 
+        # if re.fullmatch(rf"<@!?{self.bot.user.id}>", message.content):
+        #     return await message.channel.send(f"Hi!")
+
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot:
             return
-
-        # if re.fullmatch(rf"<@!?{self.bot.user.id}>", message.content):
-        #     return await message.channel.send(f"Hi!")
 
         if message.guild is None:
             return
@@ -37,14 +37,6 @@ class InviteFilterCog(commands.Cog):
             return
 
         content_lower = message.content.lower()
-
-        # whitelisted_links = ["tenor.com"]
-        # for link in whitelisted_links:
-        #     content_lower = content_lower.replace(link, "")
-        # print(f'removed allolwed links {content_lower}')
-        # if re.search("(https?://(?:www\\.|(?!www))[^\\s.]+\\.[^\\s]{2,}|www\\.[^\\s]+\\.[^\\s]{2,})", content_lower):
-        #     await message.delete()
-        #     print("found a link")
 
         if self.bot.get_cog("SettingsCommand").isInviteFilterEnabled(message.guild):
             if re.search("(?:https?://)?discord(?:app)?\.(?:com/invite|gg)/[a-zA-Z0-9]+/?", content_lower) or re.search(
@@ -85,7 +77,10 @@ class InviteFilterCog(commands.Cog):
         if after.guild is None:
             return
 
-        if after.author.guild_permissions.administrator:
+        if not isinstance(after.author, discord.Member):
+            return
+
+        if after.author.guild_permissions.manage_messages:
             return
 
         content_lower = after.content.lower()
