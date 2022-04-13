@@ -531,8 +531,15 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.command(aliases=['cancel_task'], description="Debug a task by a memory location")
-    async def debug_task(self, ctx, memory_id: hex_value):
+    async def debug_task(self, ctx, memory_id: str = None):
         """Debug a task by a memory location."""
+        if not memory_id:
+            return await ctx.send("Please enter a task.")
+
+        def hex_value(arg):
+            return int(arg, base=16)
+
+        memory_id = hex_value(memory_id)
 
         def object_at(addr):
             for o in gc.get_objects():
@@ -559,6 +566,42 @@ class OwnerCog(commands.Cog):
 
         for page in paginator.pages:
             await ctx.send(page)
+
+    @commands.is_owner()
+    @commands.command(aliases=['debugperms'], description="Shows permission resolution for a guild and an optional author.")
+    async def debugpermissions(self, ctx, guild_id=None, author_id=None):
+        """Shows permission resolution for a guild and an optional author."""
+        if not guild_id and not author_id:
+            return await ctx.send(f"{ctx.prefix}{ctx.command.name} <guild_id> <author_id>")
+
+        guild = self.bot.get_guild(int(guild_id)) or ctx.guild
+        if guild is None:
+            return await ctx.send('Guild not found?')
+
+        if author_id is None:
+            member = guild.me
+        else:
+            member = guild.get_member(int(author_id))
+
+        if member is None:
+            return await ctx.send('Member not found?')
+
+        permissions = member.guild_permissions
+        allowed, denied = [], []
+        for name, value in permissions:
+            name = name.replace('_', ' ').replace('guild', 'server').title()
+            if value:
+                allowed.append(name)
+            else:
+                denied.append(name)
+
+        e = discord.Embed(colour=discord.Colour.dark_theme(), description=f'Perms in `{guild.name}` for **{member}**')
+
+        if allowed:
+            e.add_field(name='Allowed', value='\n'.join(allowed))
+        if denied:
+            e.add_field(name='Denied', value='\n'.join(denied))
+        await ctx.send(embed=e)
 
 
 async def setup(bot):
