@@ -393,7 +393,7 @@ class OwnerCog(commands.Cog):
             self.stop()
 
     @commands.is_owner()
-    @commands.command(name="clonerepo", description="Pulls from GitHub")
+    @commands.command(aliases=["clonerepo"], description="Pulls commits or files from GitHub. Include true for files.")
     async def pullgit(self, ctx, py=False):
         """Clone commit history. Optionally pull files from git. """
         if sys.platform == DEV_PLATFORM:
@@ -416,7 +416,7 @@ class OwnerCog(commands.Cog):
             if py:
                 shutil.move(".git/cogs", "cogs")
                 shutil.move(".git/bot.py", "bot.py")
-                msg += "\nUpdated files."
+                msg += "Updated files."
             return msg
 
         async with self.lock:
