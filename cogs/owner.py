@@ -22,10 +22,6 @@ from constants import DEV_SERVER_ID, DEV_PLATFORM
 log = logging.getLogger(__name__)
 
 
-def hex_value(arg):
-    return int(arg, base=16)
-
-
 class OwnerCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -61,7 +57,9 @@ class OwnerCog(commands.Cog):
             else:
                 cogs_data += f"<:offline:821068938036379679> {cog_path}\n"
 
-        embed.add_field(name="**Cogs**", value=f"{cogs_data}", inline=True)
+        embed.add_field(name="**Extensions**", value=f"{cogs_data}", inline=False)
+
+        embed.add_field(name="**Cogs**", value=f"{str([str(e) for e in self.bot.cogs])}", inline=False)
 
         await ctx.send(embed=embed)
 
@@ -396,22 +394,36 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.command(name="clonerepo", description="Pulls from GitHub")
-    async def forceRefreshGithub(self, ctx):
+    async def pullgit(self, ctx, py=False):
+        """Clone commit history. Optionally pull files from git. """
         if sys.platform == DEV_PLATFORM:
             return await ctx.send("Don't need to.")
 
         def _pull():
             try:
+                # remove files
                 shutil.rmtree(".git")
+                if py:
+                    shutil.rmtree("cogs")
             except:
                 pass
-            return pygit2.clone_repository("https://github.com/Co0kei/Coffee-Bot", ".git", bare=True)
+
+            # clone
+            pygit2.clone_repository("https://github.com/Co0kei/Coffee-Bot", ".git", bare=not py)
+
+            msg = ""
+            # move py files
+            if py:
+                shutil.move(".git/cogs", "cogs")
+                shutil.move(".git/bot.py", "bot.py")
+                msg += "\nUpdated files."
+            return msg
 
         async with self.lock:
-            repo = await self.bot.loop.run_in_executor(None, _pull)
+            msg = await self.bot.loop.run_in_executor(None, _pull)
 
             if ctx is not None:
-                await ctx.send(repo)
+                await ctx.send(f'Pulled commits.\n{msg}')
 
     def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
@@ -424,8 +436,11 @@ class OwnerCog(commands.Cog):
 
     @commands.is_owner()
     @commands.command(name="eval", description="Evaluates code")
-    async def _eval(self, ctx, *, body: str):
+    async def _eval(self, ctx, *, body: str = None):
         """Evaluates code"""
+
+        if not body:
+            return await ctx.send("Please enter some code.")
 
         env = {
             'bot': self.bot,
@@ -492,7 +507,7 @@ class OwnerCog(commands.Cog):
         event_tasks = [
             t for t in all_tasks
             if 'Client._run_event' in repr(t) and not t.done()
-        ]
+        ]  # most likelys its on_message waiting
 
         cogs_directory = os.path.dirname(__file__)
         tasks_directory = os.path.join('discord', 'ext', 'tasks', '__init__.py')
@@ -510,7 +525,7 @@ class OwnerCog(commands.Cog):
         cpu_usage = self.bot.get_cog('AboutCommand').process.cpu_percent() / psutil.cpu_count()
         embed.add_field(name='Process', value=f'{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU', inline=False)
 
-        global_rate_limit = not self.bot.http._global_over.is_set()
+        global_rate_limit = self.bot.is_ws_ratelimited()  # not self.bot.http._global_over.is_set()
         description.append(f'Global Rate Limit: {global_rate_limit}')
 
         if global_rate_limit or total_warnings >= 9:
