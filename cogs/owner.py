@@ -159,23 +159,39 @@ class OwnerCog(commands.Cog):
 
     @commands.command(description="Reloads all cogs", aliases=["rall"])
     async def reloadall(self, ctx):
-        msg = ""
+        loaded_extensions = [e for e in self.bot.extensions]
+
+        # UNLOAD ALL EXTENSIONS
+        for extension in loaded_extensions:
+            try:
+                await self.bot.unload_extension(extension)
+            except:  # if file got deleted ignore
+                pass
+
+        # if an extensions file got deleted then just unload the cog
+        loaded_cogs = [e for e in self.bot.cogs]
+        for cog in loaded_cogs:
+            await self.bot.remove_cog(cog)
+
+        msg = "**Unloaded All Cogs**\n"
+        msg += "Extensions: " + str([str(e) for e in self.bot.extensions]) + "\n"
+        msg += "Cogs:" + str([str(e) for e in self.bot.cogs]) + "\n"
+
+        # LOAD ALL EXTENSIONS
+        msg += "\n**Loaded All Cogs:**\n"
         for file in Path('cogs').glob('**/*.py'):
             *tree, _ = file.parts
             try:
-                await self.bot.reload_extension(f"{'.'.join(tree)}.{file.stem}")
-                msg += f"\U00002705 Successfully reloaded {file}!\n"
-
-            except commands.ExtensionNotLoaded:  # if not loaded then load
                 await self.bot.load_extension(f"{'.'.join(tree)}.{file.stem}")
-                msg += f"\U00002705 Successfully loaded {file}!\n"
+                msg += f"\U00002705 Successfully loaded {file.stem}!\n"
 
             except Exception as e:
                 log.warning(f'Failed to reload extension {file}.')
-                msg += f"\U0000274c Failed to reload {file} with reason: {e}\n"
+                msg += f"\U0000274c Failed to load {file.stem} with reason: {e}\n"
                 traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-        if ctx is not None:
-            await ctx.send(msg)
+
+        # if ctx is not None:
+        await ctx.send(msg)
 
     @commands.is_owner()
     @commands.command(description="Saves all data to disk.")
