@@ -42,9 +42,10 @@ async def globalReportUser(interaction: discord.Interaction, member: discord.Mem
 async def on_ready():
     log.info(f'Bot online! Connected to {(len(bot.guilds))} Discord Servers.')
 
-    if not hasattr(bot, 'uptime'):
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(bot.guilds)} guilds'))
+
+    if not hasattr(bot, 'uptime'):  # prevent reconnects to the websocket resetting bot's start time
         bot.uptime = discord.utils.utcnow()
-        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(bot.guilds)} guilds'))
 
 
 @bot.event
