@@ -93,6 +93,8 @@ class ErrorCog(commands.Cog):
 
                 if sys.platform != DEV_PLATFORM:
                     await self.error_hook.send(embed=e, file=file)
+            else:
+                log.error(original)
 
     async def on_command_tree_error(self, interaction: discord.Interaction,
                                     command: Optional[Union[Command, ContextMenu]],
