@@ -176,7 +176,7 @@ class VoteCommand(commands.Cog):
             embed = discord.Embed(title="Top Voters", colour=discord.Colour.dark_gold())
             msg = ""
             for i in range(iteratingIndex):
-                msg += f"`#{i + 1}` **{discord_list[i]}** Votes: **{votes_list[i]:,}** | Coins: **{coins_list[i]:,}**:coin:\n"
+                msg += f"`#{i + 1}` **{discordID_list[i]}** Votes: **{votes_list[i]:,}** | Coins: **{coins_list[i]:,}**:coin:\n"
 
             embed.description = msg
             await interaction.response.send_message(embed=embed, ephemeral=True)
