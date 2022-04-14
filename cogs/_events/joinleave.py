@@ -25,6 +25,21 @@ class JoinLeaveCog(commands.Cog):
         e = discord.Embed(colour=0x53dda4, title='New Guild')  # green colour
         await self.send_guild_stats(e, guild)
 
+        if guild.me.guild_permissions.view_audit_log:
+            async for entry in guild.audit_logs(limit=2, action=discord.AuditLogAction.bot_add):
+                inviter = entry.user
+                target = entry.target
+
+                if target.id == self.bot.user.id:
+                    try:
+                        await inviter.send(f'Hey! :wave:\n'
+                                           f'Thanks for inviting me to **{guild.name}**! To get started, check out the **/help** and **/settings** command!\n'
+                                           f'For a detailed list of commands, features and examples, consider visiting my Top.gg page: '
+                                           f'https://top.gg/bot/950765718209720360', suppress_embeds=True)
+                    except discord.Forbidden:
+                        pass
+                    break
+
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         log.info(f'I have been removed from {guild.name} ({guild.id}) which has {len(guild.members):,} members.')
