@@ -11,16 +11,19 @@ class LoggerCog(commands.Cog):
 
     class LoggingFilter(logging.Filter):
         def filter(self, record):
-            # if record.getMessage().startswith('Shard ID None has sent the RESUME payload.') \
-            #         or record.getMessage().startswith('Shard ID None has successfully RESUMED session') \
-            #         or record.getMessage().startswith('Shard ID None has sent the IDENTIFY payload.') \
-            #         or record.getMessage().startswith('Shard ID None has connected to Gateway: ["') \
-            #         or record.getMessage().startswith('logging in using static token') \
-            if record.getMessage().startswith('PyNaCl is not installed, voice will NOT be supported'):
-                #     # or record.getMessage().startswith('Got a request to RESUME the websocket.') \
-                #     # or record.getMessage().startswith('Websocket closed'):
-                #
-                return False  # dont log it
+            msges = ['PyNaCl is not installed, voice will NOT be supported',
+
+                     # 'logging in using static token',
+                     'Shard ID None has sent the IDENTIFY payload.',
+                     'Shard ID None has connected to Gateway',
+
+                     'Websocket closed with WSCloseCode.ABNORMAL_CLOSURE, attempting a reconnect.',
+                     'Got a request to RESUME the websocket.',
+                     'Shard ID None has sent the RESUME payload.',
+                     'Shard ID None has successfully RESUMED session '
+                     ]
+            if any(record.getMessage().startswith(msg) for msg in msges):
+                return False
             return True
 
     async def cog_load(self):
