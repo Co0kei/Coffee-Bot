@@ -13,13 +13,6 @@ class InviteFilterCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def getModLogChannel(self, guild: discord.Guild) -> discord.TextChannel:
-        mod_log_channel = None
-        if str(guild.id) in self.bot.guild_settings:
-            if "mod_log_channel" in self.bot.guild_settings[str(guild.id)]:
-                mod_log_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["mod_log_channel"])
-        return mod_log_channel
-
     async def handleInvite(self, message: discord.Message) -> bool:
         content_lower = message.content.lower()
 
@@ -34,8 +27,9 @@ class InviteFilterCog(commands.Cog):
                 pass
 
             # log it
-            modLogChannel = self.getModLogChannel(message.guild)
-            if modLogChannel is not None:
+            settingsCog = self.bot.get_cog("SettingsCommand")
+            modLogChannel = settingsCog.getModLogChannel(message.guild)
+            if modLogChannel:
                 embed = discord.Embed()
                 embed.set_author(name="Discord Invite Posted", icon_url=message.author.display_avatar.url)
                 embed.colour = discord.Colour(0x2F3136)
@@ -71,8 +65,9 @@ class InviteFilterCog(commands.Cog):
                 pass
 
             # log it
-            modLogChannel = self.getModLogChannel(after.guild)
-            if modLogChannel is not None:
+            settingsCog = self.bot.get_cog("SettingsCommand")
+            modLogChannel = settingsCog.getModLogChannel(after.guild)
+            if modLogChannel:
                 embed = discord.Embed()
                 embed.set_author(name="Discord Invite Posted", icon_url=after.author.display_avatar.url)
                 embed.colour = discord.Colour(0x2F3136)

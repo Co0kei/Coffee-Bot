@@ -13,24 +13,12 @@ class LinkFilterCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def getModLogChannel(self, guild: discord.Guild) -> discord.TextChannel:
-        mod_log_channel = None
-        if str(guild.id) in self.bot.guild_settings:
-            if "mod_log_channel" in self.bot.guild_settings[str(guild.id)]:
-                mod_log_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["mod_log_channel"])
-        return mod_log_channel
-
-    def getWhitelistedLinks(self, guild: discord.Guild) -> list:
-        whitelisted_links = []
-        if str(guild.id) in self.bot.guild_settings:
-            if "whitelisted_links" in self.bot.guild_settings[str(guild.id)]:
-                whitelisted_links = self.bot.guild_settings[str(guild.id)]["whitelisted_links"]
-        return whitelisted_links
-
     async def handleLink(self, message: discord.Message) -> bool:
         content_lower = message.content.lower()
 
-        whitelisted_links = self.getWhitelistedLinks(message.guild)
+        settingsCog = self.bot.get_cog("SettingsCommand")
+
+        whitelisted_links = settingsCog.getWhitelistedLinks(message.guild)
 
         for link in whitelisted_links:
             content_lower = content_lower.replace(link, "")
@@ -45,8 +33,8 @@ class LinkFilterCog(commands.Cog):
             except discord.Forbidden as e:  # no permission
                 pass
             # log it
-            modLogChannel = self.getModLogChannel(message.guild)
-            if modLogChannel is not None:
+            modLogChannel = settingsCog.getModLogChannel(message.guild)
+            if modLogChannel:
                 embed = discord.Embed()
                 embed.set_author(name="Link Posted", icon_url=message.author.display_avatar.url)
                 embed.colour = discord.Colour(0x2F3136)
@@ -71,7 +59,9 @@ class LinkFilterCog(commands.Cog):
     async def handleLinkEdit(self, before, after) -> bool:
         content_lower = after.content.lower()
 
-        whitelisted_links = self.getWhitelistedLinks(after.guild)
+        settingsCog = self.bot.get_cog("SettingsCommand")
+
+        whitelisted_links = settingsCog.getWhitelistedLinks(after.guild)
 
         for link in whitelisted_links:
             content_lower = content_lower.replace(link, "")
@@ -86,8 +76,8 @@ class LinkFilterCog(commands.Cog):
             except discord.Forbidden as e:  # no permission
                 pass
             # log it
-            modLogChannel = self.getModLogChannel(after.guild)
-            if modLogChannel is not None:
+            modLogChannel = settingsCog.getModLogChannel(after.guild)
+            if modLogChannel:
                 embed = discord.Embed()
                 embed.set_author(name="Link Posted", icon_url=after.author.display_avatar.url)
                 embed.colour = discord.Colour(0x2F3136)
