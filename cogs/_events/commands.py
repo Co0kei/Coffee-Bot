@@ -29,9 +29,11 @@ class CommandCog(commands.Cog):
 
             if interaction.guild is None:
                 guild = None
+                guild_id = None
                 destination = 'Private Message'
             else:
                 guild = f'{interaction.guild.name} (ID: {interaction.guild.id}) ({len(interaction.guild.members):,} members)'
+                guild_id = interaction.guild.id
                 destination = f'#{interaction.channel}'
 
             self.bot.stat_data["commands_used"] += 1
@@ -70,7 +72,11 @@ class CommandCog(commands.Cog):
             embed.timestamp = discord.utils.utcnow()
             embed.set_footer(text=f'Total commands ran: {self.bot.stat_data["commands_used"]:,}')
 
-            if interaction.guild is not None and interaction.guild.id == DEV_SERVER_ID:
+            # Send to stats thing
+            await self.bot.get_cog('StatsCog').register_command(interaction.data['name'], guild_id, interaction.channel.id, interaction.user.id, interaction.created_at.isoformat(),
+                                                                None, command_type)
+
+            if (interaction.guild is not None and interaction.guild.id == DEV_SERVER_ID) or interaction.user.id == self.bot.owner_id:
                 return
 
             if sys.platform != DEV_PLATFORM:
@@ -78,15 +84,16 @@ class CommandCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx):
-        # command_name = ctx.command.qualified_name
         message = ctx.message
         user = f'{ctx.author} (ID: {ctx.author.id})'
 
         if ctx.guild is None:
             guild = None
+            guild_id = None
             destination = 'Private Message'
         else:
             guild = f'{ctx.guild.name} (ID: {ctx.guild.id}) ({len(ctx.guild.members):,} members)'
+            guild_id = ctx.guild.id
             destination = f'#{message.channel}'
 
         self.bot.stat_data["commands_used"] += 1
@@ -102,7 +109,9 @@ class CommandCog(commands.Cog):
         embed.timestamp = discord.utils.utcnow()
         embed.set_footer(text=f'Total commands ran: {self.bot.stat_data["commands_used"]:,}')
 
-        if ctx.guild is not None and ctx.guild.id == DEV_SERVER_ID:
+        # DONT SAVE MESSAGE BASED COMMANDS <---------------
+
+        if (ctx.guild is not None and ctx.guild.id == DEV_SERVER_ID) or ctx.author.id == self.bot.owner_id:
             return
 
         if sys.platform != DEV_PLATFORM:
