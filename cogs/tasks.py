@@ -51,7 +51,7 @@ class TaskCog(commands.Cog):
                         if user is None:
                             # user not in cache so attempt to retrieve them
                             user = await self.bot.fetch_user(int(discordID))
-                            log.info(f"User was none attempting an API call. User: {user}")
+                            log.info(f"User was none attempted an API call. User: {user}")
 
                         if user is not None:
                             try:
