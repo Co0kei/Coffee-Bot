@@ -757,6 +757,9 @@ class SettingsCommand(commands.Cog):
                     for link in LINKS_TO_REMOVE:
                         whitelisted_links.remove(link)
                         msg.append(f'Removed `{link}`')
+                    if remove.lower() == "all":
+                        whitelisted_links = []
+                        msg.append(f'Whitelisted Links has been `cleared`')
 
                 # Save to postgreSQL
                 query = "UPDATE guilds SET whitelisted_links = $1 WHERE guild_id = $2;"
@@ -773,6 +776,9 @@ class SettingsCommand(commands.Cog):
 
                 await self.main_view.refreshEmbed()
 
+                    if remove.lower() == "all":
+                        chat_filter = []
+                        msg.append(f'Chat Filter has been `cleared`')
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
     class ModLogChannelModel(ui.Modal):
