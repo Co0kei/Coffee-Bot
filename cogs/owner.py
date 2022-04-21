@@ -12,12 +12,13 @@ import traceback
 from contextlib import redirect_stdout
 from pathlib import Path
 
+import asyncpg
 import discord
 import psutil
 import pygit2
 from discord.ext import commands
 
-from constants import DEV_SERVER_ID, DEV_PLATFORM
+from constants import *
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +31,39 @@ class OwnerCog(commands.Cog):
 
     async def cog_check(self, ctx) -> bool:
         return await self.bot.is_owner(ctx.author)
+
+    async def cog_load(self) -> None:
+        await self.connect_to_postgreSQL()
+
+    async def cog_unload(self) -> None:
+        await self.bot.pool.close()  # close connection pool
+
+    async def connect_to_postgreSQL(self):
+        if sys.platform == DEV_PLATFORM:
+            url = DEV_POSTGRE_URL
+        else:
+            url = POSTGRE_URL
+
+        kwargs = {
+            'command_timeout': 60,
+            'max_size': 20,
+            'min_size': 20,
+        }
+
+        def _encode_jsonb(value):
+            return json.dumps(value)
+
+        def _decode_jsonb(value):
+            return json.loads(value)
+
+        async def init(con):
+            await con.set_type_codec('jsonb', schema='pg_catalog', encoder=_encode_jsonb, decoder=_decode_jsonb, format='text')
+
+        try:
+            self.bot.pool = await asyncpg.create_pool(url, init=init, **kwargs)
+            log.info("Connected to PostgreSQL")
+        except Exception as e:
+            log.exception('Could not set up PostgreSQL. Exiting.', e)
 
     @commands.command(description="Shows all owner help commands")
     async def owner(self, ctx):
@@ -192,7 +226,7 @@ class OwnerCog(commands.Cog):
         await ctx.send(msg)
 
     @commands.is_owner()
-    @commands.command(description="Saves all data to disk.")
+    @commands.command(description="Saves data to disk")
     async def dump(self, ctx):
         """ Save data to disk """
 
@@ -201,10 +235,10 @@ class OwnerCog(commands.Cog):
                 json.dump(self.bot.stat_data, f, ensure_ascii=False, indent=4)
                 f.close()
 
-            # save guild settings
-            with open('guild_settings.json', 'w', encoding='utf-8') as f:
-                json.dump(self.bot.guild_settings, f, ensure_ascii=False, indent=4)
-                f.close()
+            # # save guild settings
+            # with open('guild_settings.json', 'w', encoding='utf-8') as f:
+            #     json.dump(self.bot.guild_settings, f, ensure_ascii=False, indent=4)
+            #     f.close()
 
             # save vote data
             with open('votes.json', 'w', encoding='utf-8') as f:
@@ -218,7 +252,7 @@ class OwnerCog(commands.Cog):
                 await ctx.message.reply("Data saved")
 
     @commands.is_owner()
-    @commands.command(aliases=["loadmemory"], description="Reloads the data in memory by reading from disk")
+    @commands.command(aliases=["loadmemory"], description="Reloads the data in memory by reading from disk and postgreSQL")
     async def refreshmemory(self, ctx):
         """ Reload data from disk"""
 
@@ -228,21 +262,46 @@ class OwnerCog(commands.Cog):
                 self.bot.stat_data = data
                 f.close()
 
-            with open('guild_settings.json', 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                self.bot.guild_settings = data  # load guild settings
-                f.close()
+            # with open('guild_settings.json', 'r', encoding='utf-8') as f:
+            #     data = json.load(f)
+            #     self.bot.guild_settings = data  # load guild settings
+            #     f.close()
 
             with open('votes.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 self.bot.vote_data = data  # load vote data
                 f.close()
 
+        await self.load_guilds()
+
         async with self.lock:
             await self.bot.loop.run_in_executor(None, _load)
 
             if ctx is not None:
                 await ctx.message.reply("Data reloaded")
+
+    async def load_guilds(self):
+        """ Loads all guild data into memory from postgreSQL"""
+        query = "SELECT * FROM guilds;"
+
+        async with self.bot.pool.acquire() as conn:
+            async with conn.transaction():
+                guild_data = await conn.fetch(query)  # This returns a asyncpg.Record object, which is similar to a dict
+
+        guild_settings = {}
+
+        for guild in guild_data:
+            guild_id = guild["guild_id"]
+            guild_settings[str(guild_id)] = {}
+
+            for column, value in guild.items():
+                if column == "id" or column == "guild_id":
+                    continue
+                elif value is not None:
+                    guild_settings[str(guild_id)][column] = value
+
+        self.bot.guild_settings = guild_settings
+        log.info(guild_settings)
 
     # @commands.is_owner()
     # @commands.command(description="Shows 1000 most recent votes for the bot")
@@ -262,7 +321,7 @@ class OwnerCog(commands.Cog):
     async def backup(self, ctx):
 
         def _backup():
-            files = ['guild_settings.json', 'stats.json', 'votes.json']
+            files = ['stats.json', 'votes.json']  # 'guild_settings.json',
 
             shutil.rmtree("backups")
             os.mkdir('backups')
@@ -495,7 +554,33 @@ class OwnerCog(commands.Cog):
         total_warnings = 0
 
         embed = discord.Embed(title='Bot Health Report', colour=HEALTHY)
-        description = []
+
+        # Check the connection pool health.
+        pool = self.bot.pool
+        total_waiting = len(pool._queue._getters)
+        current_generation = pool._generation
+
+        description = [
+            f'Total `Pool.acquire` Waiters: {total_waiting}',
+            f'Current Pool Generation: {current_generation}',
+            f'Connections In Use: {len(pool._holders) - pool._queue.qsize()}'
+        ]
+
+        questionable_connections = 0
+        connection_value = []
+        for index, holder in enumerate(pool._holders, start=1):
+            generation = holder._generation
+            in_use = holder._in_use is not None
+            is_closed = holder._con is None or holder._con.is_closed()
+            display = f'gen={holder._generation} in_use={in_use} closed={is_closed}'
+            questionable_connections += any((in_use, generation != current_generation))
+            connection_value.append(f'<Holder i={index} {display}>')
+
+        joined_value = '\n'.join(connection_value)
+        embed.add_field(name='Connections', value=f'```py\n{joined_value}\n```', inline=False)
+
+        description.append(f'Questionable Connections: {questionable_connections}')
+        total_warnings += questionable_connections
 
         try:
             task_retriever = asyncio.Task.all_tasks
@@ -521,12 +606,20 @@ class OwnerCog(commands.Cog):
         embed.add_field(name='Inner Tasks', value=f'Total: {len(inner_tasks)}\nFailed: {bad_inner_tasks or "None"}')
         embed.add_field(name='Events Waiting', value=f'Total: {len(event_tasks)}', inline=False)
 
+        command_waiters = len(self.bot.get_cog('StatsCog')._data_batch)
+        is_locked = self.bot.get_cog('StatsCog')._batch_lock.locked()
+        description.append(f'Commands Waiting: {command_waiters}, Batch Locked: {is_locked}')
+
         memory_usage = self.bot.get_cog('AboutCommand').process.memory_full_info().uss / 1024 ** 2
         cpu_usage = self.bot.get_cog('AboutCommand').process.cpu_percent() / psutil.cpu_count()
-        embed.add_field(name='Process', value=f'{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU', inline=False)
+        embed.add_field(name='Process', value=f'{memory_usage:.2f} MB\n{cpu_usage:.2f}% CPU', inline=False)
 
         global_rate_limit = self.bot.is_ws_ratelimited()  # not self.bot.http._global_over.is_set()
         description.append(f'Global Rate Limit: {global_rate_limit}')
+
+        if command_waiters >= 8:
+            total_warnings += 1
+            embed.colour = WARNING
 
         if global_rate_limit or total_warnings >= 9:
             embed.colour = UNHEALTHY
@@ -620,4 +713,6 @@ class OwnerCog(commands.Cog):
 
 
 async def setup(bot):
+    if not hasattr(bot, 'uptime'):
+        bot.uptime = discord.utils.utcnow()
     await bot.add_cog(OwnerCog(bot))
