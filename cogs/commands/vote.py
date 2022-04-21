@@ -81,10 +81,15 @@ class VoteCommand(commands.Cog):
 
         view = self.VoteHistoryButton(commandsCog=self, userID=interaction.user.id)
 
+        if total_votes == 0:  # If they havent voted disabled buttons.
+            buttons = [item for item in view.children if item.type == discord.ComponentType.button]
+            for button in buttons:
+                if not button.url:
+                    button.disabled = True
+
         await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
 
-        msg = await interaction.original_message()
-        view.setOriginalMessage(msg)  # pass the original message into the class
+        view.message = await interaction.original_message()
 
     class VoteHistoryButton(discord.ui.View):
 
@@ -94,9 +99,6 @@ class VoteCommand(commands.Cog):
             self.commandsCog = commandsCog
             self.userID = userID  # the user which is allowed to click the buttons
             self.add_item(discord.ui.Button(label="Vote!", url="https://top.gg/bot/950765718209720360/vote"))
-
-        def setOriginalMessage(self, message: discord.Message):
-            self.message = message
 
         async def on_timeout(self) -> None:
             await self.message.edit(view=None)
