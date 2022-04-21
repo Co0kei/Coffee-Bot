@@ -218,7 +218,7 @@ class SettingsCommand(commands.Cog):
             else:
                 report_self = "`Disabled` <:cross:872834807476924506>"
             embed.add_field(name='\U0001f465 **Report Self**',
-                            value=f"_Description_: Set whether members can report themselves.\n"
+                            value=f"_Description_: When enabled members can report themselves.\n"
                                   f"_Value_: {report_self}", inline=False)
 
             if self.isReportBotsEnabled(guild):
@@ -226,7 +226,7 @@ class SettingsCommand(commands.Cog):
             else:
                 report_bots = "`Disabled` <:cross:872834807476924506>"
             embed.add_field(name='<:bot:966666994357248031> **Report Bots**',
-                            value=f"_Description_: Set whether members can report bots.\n"
+                            value=f"_Description_: When enabled members can report bots.\n"
                                   f"_Value_: {report_bots}", inline=False)
 
             if self.isReportAdminsEnabled(guild):
@@ -234,7 +234,7 @@ class SettingsCommand(commands.Cog):
             else:
                 report_admins = "`Disabled` <:cross:872834807476924506>"
             embed.add_field(name='<:admin:966668904313270322> **Report Admins**',
-                            value=f"_Description_: Set whether members can report server admins.\n"
+                            value=f"_Description_: When enabled members can report server admins.\n"
                                   f"_Value_: {report_admins}", inline=False)
             return embed
 
@@ -247,7 +247,7 @@ class SettingsCommand(commands.Cog):
             else:
                 invite_filter = "`Disabled` <:cross:872834807476924506>"
             embed.add_field(name='<:invite:966673137741729872> **Invite Filter**',
-                            value=f"_Description_: Set whether members can post Discord server invites.\n"
+                            value=f"_Description_: When enabled members can't post Discord server invites.\n"
                                   f"_Value_: {invite_filter}", inline=False)
 
             if self.isLinkFilterEnabled(guild):
@@ -255,7 +255,7 @@ class SettingsCommand(commands.Cog):
             else:
                 link_filter = "`Disabled` <:cross:872834807476924506>"
             embed.add_field(name='<:link:966673134033989645> **Link Filter**',
-                            value=f"_Description_: Set whether members can post links.\n"
+                            value=f"_Description_: When enabled members can only post whitelisted links.\n"
                                   f"_Value_: {link_filter}", inline=False)
 
             whitelisted_links = self.getWhitelistedLinks(guild)
@@ -273,7 +273,7 @@ class SettingsCommand(commands.Cog):
             else:
                 mod_log_channel = "`None`"
             embed.add_field(name='<:channel:966662246581301308> **Mod Log Channel**',
-                            value=f"_Description_: Set a channel that notifies you of attempts to bypass the invite / link filter.\n"
+                            value=f"_Description_: Set a channel that notifies you of attempts to bypass the invite/link/chat filter.\n"
                                   f"_Value_: {mod_log_channel}", inline=False)
             return embed
 
@@ -311,7 +311,8 @@ class SettingsCommand(commands.Cog):
                 discord.ui.Button(custom_id="Link Filter", style=discord.ButtonStyle.green if self.isLinkFilterEnabled(guild) else discord.ButtonStyle.red, emoji="<:link:966673134033989645>",
                                   row=1),
                 discord.ui.Button(custom_id="Whitelisted Links", style=discord.ButtonStyle.blurple, emoji="<:Whitelist:966673595583586354>", row=1),
-                discord.ui.Button(custom_id="Mod Log Channel", style=discord.ButtonStyle.blurple, emoji="<:channel:966662246581301308>", row=1)
+                discord.ui.Button(custom_id="Chat Filter", style=discord.ButtonStyle.blurple, emoji="<:chat:966783738547691520>", row=2),
+                discord.ui.Button(custom_id="Mod Log Channel", style=discord.ButtonStyle.blurple, emoji="<:channel:966662246581301308>", row=2)
             ]
         elif type == SettingPage.Logs:
             return [
