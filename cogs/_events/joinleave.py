@@ -23,7 +23,6 @@ class JoinLeaveCog(commands.Cog):
     async def on_guild_join(self, guild):
         log.info(f'I have been invited to {guild.name} ({guild.id}) which has {len(guild.members):,} members.')
         e = discord.Embed(colour=0x53dda4, title='New Guild')  # green colour
-        await self.send_guild_stats(e, guild)
 
         if guild.me.guild_permissions.view_audit_log:
             async for entry in guild.audit_logs(limit=2, action=discord.AuditLogAction.bot_add):
@@ -38,7 +37,10 @@ class JoinLeaveCog(commands.Cog):
                                            f'https://top.gg/bot/950765718209720360', suppress_embeds=True)
                     except discord.Forbidden:
                         pass
+                    e.description = f"Invited by `{inviter}`!"
                     break
+
+        await self.send_guild_stats(e, guild)
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
