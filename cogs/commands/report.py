@@ -21,47 +21,25 @@ class ReportCommand(commands.Cog):
         await self.handleUserReport(interaction, member, image)
 
     # Methods
-    def getReportsChannel(self, guild: discord.Guild) -> discord.TextChannel:
-        reportsChannel = None
-        if str(guild.id) in self.bot.guild_settings:
-            if "reports_channel_id" in self.bot.guild_settings[str(guild.id)]:
-                reportsChannel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["reports_channel_id"])
-        return reportsChannel
-
-    def getReportsAlertRole(self, guild: discord.Guild) -> discord.Role:
-        reportsRole = None
-        if str(guild.id) in self.bot.guild_settings:
-            if "reports_alert_role_id" in self.bot.guild_settings[str(guild.id)]:
-                reportsRole = guild.get_role(self.bot.guild_settings[str(guild.id)]["reports_alert_role_id"])
-        return reportsRole
-
-    def getReportsBannedRole(self, guild: discord.Guild) -> discord.Role:
-        reportsBannedRole = None
-        if str(guild.id) in self.bot.guild_settings:
-            if "reports_banned_role_id" in self.bot.guild_settings[str(guild.id)]:
-                reportsBannedRole = guild.get_role(self.bot.guild_settings[str(guild.id)]["reports_banned_role_id"])
-        return reportsBannedRole
-
     def getNoReportsChannelEmbed(self) -> discord.Embed:
         embed = discord.Embed(title="Configuration Error")
         embed.description = f'This Discord server has not been configured yet.\nPlease ask a server administrator to use the **/settings** command and set a reports channel.' \
                             f'\nCurrently I don\'t know which channel to send reports to!'
         embed.colour = discord.Colour.red()
-        embed.set_image(url="https://cdn.discordapp.com/attachments/764846716557197323/953752057725202472/unknown.png")
+        embed.set_image(url="https://cdn.discordapp.com/attachments/764846716557197323/966418545414135818/unknown.png")
         return embed
 
     def getReportsBannedEmbed(self, guild: discord.Guild) -> discord.Embed:
+        settingsCog = self.bot.get_cog("SettingsCommand")
         embed = discord.Embed(title="Reports Ban")
-        embed.description = f'You have the {self.getReportsBannedRole(guild).mention} role which is preventing you from creating reports.'
+        embed.description = f'You have the {settingsCog.getReportsBannedRole(guild).mention} role which is preventing you from creating reports.'
         embed.colour = discord.Colour.red()
         return embed
 
     def check_cooldown(self, member: discord.Member) -> int:
         cooldown_end = self.on_cooldown.get(member.id)
-
         if cooldown_end is None or cooldown_end < datetime.now():  # If there's no cooldown or it's over
-            self.on_cooldown[member.id] = datetime.now() + timedelta(
-                seconds=10)  # Add the datetime of the cooldown's end to the dictionary
+            self.on_cooldown[member.id] = datetime.now() + timedelta(seconds=10)  # Add the datetime of the cooldown's end to the dictionary
             return 0  # allow the command to run
         else:
             return (cooldown_end - datetime.now()).total_seconds()
@@ -70,53 +48,42 @@ class ReportCommand(commands.Cog):
     async def handleMessageReport(self, interaction: discord.Interaction, message: discord.Message):
 
         if message.guild is None:
-            await interaction.response.send_message("Please use this command in a Discord server.")
-            return
+            return await interaction.response.send_message("Please use this command in a Discord server.")
 
-        # check reports channel setup
-        if self.getReportsChannel(message.guild) is None:
-            await interaction.response.send_message(embed=self.getNoReportsChannelEmbed(), ephemeral=True)
-            return
+        settingsCog = self.bot.get_cog("SettingsCommand")
 
-        # check if user is banned from creating reports
-        if self.getReportsBannedRole(message.guild) is not None:
-            if interaction.user.get_role(self.getReportsBannedRole(interaction.guild).id) is not None:
-                await interaction.response.send_message(embed=self.getReportsBannedEmbed(message.guild), ephemeral=True)
-                return
+        if not settingsCog.getReportsChannel(message.guild):
+            return await interaction.response.send_message(embed=self.getNoReportsChannelEmbed(), ephemeral=True)
 
-        # Check not from self
-        if not self.bot.get_cog("SettingsCommand").isReportSelfEnabled(interaction.guild):
+        if settingsCog.getReportsBannedRole(message.guild):
+            if interaction.user.get_role(settingsCog.getReportsBannedRole(message.guild).id):
+                return await interaction.response.send_message(embed=self.getReportsBannedEmbed(message.guild), ephemeral=True)
+
+        if not settingsCog.isReportSelfEnabled(message.guild):
             if message.author.id == interaction.user.id:
-                await interaction.response.send_message("Sorry, you can't report your own messages!", ephemeral=True)
-                return
+                return await interaction.response.send_message("Sorry, you can't report your own messages!", ephemeral=True)
 
-        # Check the message author is not a bot
-        if not self.bot.get_cog("SettingsCommand").isReportBotsEnabled(interaction.guild):
+        if not settingsCog.isReportBotsEnabled(message.guild):
             if message.author.bot:
-                await interaction.response.send_message("Sorry, you can't report a bot's message!", ephemeral=True)
-                return
+                return await interaction.response.send_message("Sorry, you can't report a bot's message!", ephemeral=True)
 
-        # Check the member is not an admin
-        if not self.bot.get_cog("SettingsCommand").isReportAdminsEnabled(interaction.guild):
+        if not settingsCog.isReportAdminsEnabled(interaction.guild):
             if message.author.guild_permissions.administrator and not message.author.bot and not message.author.id == interaction.user.id:
-                await interaction.response.send_message("Sorry, you can't report a server administrator's message!",
-                                                        ephemeral=True)
-                return
+                return await interaction.response.send_message("Sorry, you can't report a server administrator's message!", ephemeral=True)
 
         cooldown = self.check_cooldown(interaction.user)
         if cooldown != 0:
-            return await interaction.response.send_message(
-                f"Please wait {cooldown:,.2f}s before posting another report!", ephemeral=True)
+            return await interaction.response.send_message(f"Please wait {cooldown:,.2f}s before posting another report!", ephemeral=True)
 
-        await interaction.response.send_modal(self.MessageReportModal(message=message, interactionsCog=self))
+        await interaction.response.send_modal(self.MessageReportModal(message=message, settingsCog=settingsCog))
 
     class MessageReportModal(ui.Modal, title="Report Message"):
         """ A modal for user to enter a reason as to why they are reporting a message """
 
-        def __init__(self, message=None, interactionsCog=None):
+        def __init__(self, message=None, settingsCog=None):
             super().__init__()
             self.message = message
-            self.interactionsCog = interactionsCog
+            self.settingsCog = settingsCog
 
         reason = ui.TextInput(label='Reason', style=discord.TextStyle.paragraph, placeholder="Report reason",
                               required=True, max_length=2000)
@@ -175,21 +142,20 @@ class ReportCommand(commands.Cog):
 
             embed.description = embedDescription
 
-            if self.interactionsCog.getReportsAlertRole(interaction.guild) is not None:
-                content = f"{self.interactionsCog.getReportsAlertRole(interaction.guild).mention}"
+            if self.settingsCog.getReportsAlertRole(interaction.guild):
+                content = f"{self.settingsCog.getReportsAlertRole(interaction.guild).mention}"
             else:
                 content = None
 
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label="Jump to message", url=self.message.jump_url))
 
-            await self.interactionsCog.getReportsChannel(interaction.guild).send(
+            await self.settingsCog.getReportsChannel(interaction.guild).send(
                 content=content, embed=embed, view=view,
                 allowed_mentions=discord.AllowedMentions(roles=True))
 
     # User reports
-    async def handleUserReport(self, interaction: discord.Interaction, member: discord.Member,
-                               attachment: discord.Attachment):
+    async def handleUserReport(self, interaction: discord.Interaction, member: discord.Member, attachment: discord.Attachment):
 
         if interaction.guild is None:
             return await interaction.response.send_message("Please use this command in a Discord server.")
@@ -197,51 +163,40 @@ class ReportCommand(commands.Cog):
         if isinstance(member, discord.User):
             return await interaction.response.send_message("This user is no longer in this server.", ephemeral=True)
 
-        # check that their is a channel setup
-        if self.getReportsChannel(member.guild) is None:
-            await interaction.response.send_message(embed=self.getNoReportsChannelEmbed(), ephemeral=True)
-            return
+        settingsCog = self.bot.get_cog("SettingsCommand")
 
-        # check if user is banned from creating reports
-        if self.getReportsBannedRole(member.guild) is not None:
-            if interaction.user.get_role(self.getReportsBannedRole(member.guild).id) is not None:
-                await interaction.response.send_message(embed=self.getReportsBannedEmbed(member.guild), ephemeral=True)
-                return
+        if not settingsCog.getReportsChannel(member.guild):
+            return await interaction.response.send_message(embed=self.getNoReportsChannelEmbed(), ephemeral=True)
 
-        # Check not from self
-        if not self.bot.get_cog("SettingsCommand").isReportSelfEnabled(interaction.guild):
+        if settingsCog.getReportsBannedRole(member.guild):
+            if interaction.user.get_role(settingsCog.getReportsBannedRole(member.guild).id):
+                return await interaction.response.send_message(embed=self.getReportsBannedEmbed(member.guild), ephemeral=True)
+
+        if not settingsCog.isReportSelfEnabled(interaction.guild):
             if member.id == interaction.user.id:
-                await interaction.response.send_message("Sorry, you can't report yourself!", ephemeral=True)
-                return
+                return await interaction.response.send_message("Sorry, you can't report yourself!", ephemeral=True)
 
-        # Check the member is not a bot
-        if not self.bot.get_cog("SettingsCommand").isReportBotsEnabled(interaction.guild):
+        if not settingsCog.isReportBotsEnabled(interaction.guild):
             if member.bot:
-                await interaction.response.send_message("Sorry, you can't report a bot!", ephemeral=True)
-                return
+                return await interaction.response.send_message("Sorry, you can't report a bot!", ephemeral=True)
 
-        # Check the member is not an admin
-        if not self.bot.get_cog("SettingsCommand").isReportAdminsEnabled(interaction.guild):
+        if not settingsCog.isReportAdminsEnabled(interaction.guild):
             if member.guild_permissions.administrator and not member.bot and not member.id == interaction.user.id:
-                await interaction.response.send_message("Sorry, you can't report a server administrator!",
-                                                        ephemeral=True)
-                return
+                return await interaction.response.send_message("Sorry, you can't report a server administrator!", ephemeral=True)
 
         cooldown = self.check_cooldown(interaction.user)
         if cooldown != 0:
-            return await interaction.response.send_message(
-                f"Please wait {cooldown:,.2f}s before posting another report!", ephemeral=True)
+            return await interaction.response.send_message(f"Please wait {cooldown:,.2f}s before posting another report!", ephemeral=True)
 
-        await interaction.response.send_modal(
-            self.UserReportModal(member=member, interactionsCog=self, attachment=attachment))
+        await interaction.response.send_modal(self.UserReportModal(member=member, settingsCog=settingsCog, attachment=attachment))
 
     class UserReportModal(ui.Modal, title="Report User"):
         """ A modal for user to enter a reason as to why they are reporting a user """
 
-        def __init__(self, member=None, interactionsCog=None, attachment=None):
+        def __init__(self, member=None, settingsCog=None, attachment=None):
             super().__init__()
             self.member = member
-            self.interactionsCog = interactionsCog
+            self.settingsCog = settingsCog
             self.attachment = attachment
 
         reason = ui.TextInput(label='Reason', style=discord.TextStyle.paragraph, placeholder="Report reason",
@@ -293,12 +248,12 @@ class ReportCommand(commands.Cog):
 
             embed.description = embedDescription
 
-            if self.interactionsCog.getReportsAlertRole(interaction.guild) is not None:
-                finalMsg = await self.interactionsCog.getReportsChannel(interaction.guild).send(
-                    content=f"{self.interactionsCog.getReportsAlertRole(interaction.guild).mention}", embed=embed,
+            if self.settingsCog.getReportsAlertRole(interaction.guild):
+                finalMsg = await self.settingsCog.getReportsChannel(interaction.guild).send(
+                    content=f"{self.settingsCog.getReportsAlertRole(interaction.guild).mention}", embed=embed,
                     allowed_mentions=discord.AllowedMentions(roles=True))
             else:
-                finalMsg = await self.interactionsCog.getReportsChannel(interaction.guild).send(embed=embed)
+                finalMsg = await self.settingsCog.getReportsChannel(interaction.guild).send(embed=embed)
 
             # get recent messages
             # counter = 0
