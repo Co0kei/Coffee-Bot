@@ -4,3 +4,4 @@ pygit2
 psutil
 topggpy
 bedwarspro
+asyncpg
