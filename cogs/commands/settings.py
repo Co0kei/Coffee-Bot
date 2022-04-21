@@ -141,6 +141,9 @@ class SettingsCommand(commands.Cog):
             elif button == "Whitelisted Links":
                 model = self.cog.WhitelistedLinkModel(self.bot, self)
                 await interaction.response.send_modal(model)
+            elif button == "Chat Filter":
+                model = self.cog.ChatFilterModel(self.bot, self)
+                await interaction.response.send_modal(model)
             elif button == "Mod Log Channel":
                 model = self.cog.ModLogChannelModel(self.bot, self)
                 await interaction.response.send_modal(model)
@@ -266,6 +269,15 @@ class SettingsCommand(commands.Cog):
             embed.add_field(name='<:Whitelist:966673595583586354> **Whitelisted Links**',
                             value=f"_Description_: Set links which members are allowed to post.\n"
                                   f"_Value_: {whitelisted_links}"[0:1024], inline=False)
+
+            chat_filter = self.getChatFilter(guild)
+            if chat_filter:
+                chat_filter = f'`{", ".join(chat_filter)}`'
+            else:
+                chat_filter = "`None`"
+            embed.add_field(name='<:chat:966783738547691520> **Chat Filter**',
+                            value=f"_Description_: Set words which members can't use.\n"
+                                  f"_Value_: {chat_filter}"[0:1024], inline=False)
 
             mod_log_channel = self.getModLogChannel(guild)
             if mod_log_channel:
@@ -420,6 +432,13 @@ class SettingsCommand(commands.Cog):
             if "whitelisted_links" in self.bot.guild_settings[str(guild.id)]:
                 whitelisted_links = self.bot.guild_settings[str(guild.id)]["whitelisted_links"]
         return whitelisted_links
+
+    def getChatFilter(self, guild: discord.Guild) -> list:
+        chat_filter = []
+        if str(guild.id) in self.bot.guild_settings:
+            if "chat_filter" in self.bot.guild_settings[str(guild.id)]:
+                chat_filter = self.bot.guild_settings[str(guild.id)]["chat_filter"]
+        return chat_filter
 
     def getPrefix(self, guild: discord.Guild) -> str:
         prefix = self.bot.default_prefix
@@ -707,7 +726,7 @@ class SettingsCommand(commands.Cog):
 
             if not add and not remove:
                 embed = discord.Embed(title="No links found",
-                                      description="Please enter some links to either remove or add to the whitelist.",
+                                      description="Please enter some links to either add or remove from the whitelist.",
                                       colour=discord.Colour.dark_red())
             else:
                 guild_id = interaction.guild.id
@@ -729,7 +748,7 @@ class SettingsCommand(commands.Cog):
                         if link not in whitelisted_links:
                             LINKS_TO_ADD.append(link)
                         else:
-                            msg.append(f'`{link}` is already in the whitelist.')
+                            msg.append(f'`{link}` is already in the whitelist')
 
                     for link in LINKS_TO_ADD:
                         if re.match("([^\\s.]+\\.[^\\s]{2,})", link):
@@ -739,27 +758,29 @@ class SettingsCommand(commands.Cog):
                             msg.append(f'`{link}` is an invalid link')
 
                 if remove:
-                    to_remove = remove.replace(" ", "")
-                    to_remove = to_remove.replace("'", "")
-                    to_remove = to_remove.replace("\"", "")
-                    to_remove = to_remove.lower()
-                    to_remove = to_remove.split(",")
-                    to_remove = list(dict.fromkeys(to_remove))  # remove duplicates
 
-                    LINKS_TO_REMOVE = []
-
-                    for link in to_remove:
-                        if link in whitelisted_links:
-                            LINKS_TO_REMOVE.append(link)
-                        else:
-                            msg.append(f'`{link}` is not in the whitelist')
-
-                    for link in LINKS_TO_REMOVE:
-                        whitelisted_links.remove(link)
-                        msg.append(f'Removed `{link}`')
                     if remove.lower() == "all":
                         whitelisted_links = []
                         msg.append(f'Whitelisted Links has been `cleared`')
+                    else:
+                        to_remove = remove.replace(" ", "")
+                        to_remove = to_remove.replace("'", "")
+                        to_remove = to_remove.replace("\"", "")
+                        to_remove = to_remove.lower()
+                        to_remove = to_remove.split(",")
+                        to_remove = list(dict.fromkeys(to_remove))  # remove duplicates
+
+                        LINKS_TO_REMOVE = []
+
+                        for link in to_remove:
+                            if link in whitelisted_links:
+                                LINKS_TO_REMOVE.append(link)
+                            else:
+                                msg.append(f'`{link}` is not in the whitelist')
+
+                        for link in LINKS_TO_REMOVE:
+                            whitelisted_links.remove(link)
+                            msg.append(f'Removed `{link}`')
 
                 # Save to postgreSQL
                 query = "UPDATE guilds SET whitelisted_links = $1 WHERE guild_id = $2;"
@@ -776,9 +797,92 @@ class SettingsCommand(commands.Cog):
 
                 await self.main_view.refreshEmbed()
 
+            embed.set_footer(text="You can add/remove multiple links at once by using commas such as 'a.com, b.net'.\nUse 'all' in the remove link field to remove all links.")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    class ChatFilterModel(ui.Modal):
+        def __init__(self, bot=None, main_view=None):
+            super().__init__(title="Chat Filter")
+            self.bot = bot
+            self.main_view = main_view
+
+        add = ui.TextInput(label='Add Words', style=discord.TextStyle.short,
+                           placeholder="Enter any words to add to the filter",
+                           required=False, max_length=1000)
+        remove = ui.TextInput(label='Remove Words', style=discord.TextStyle.short,
+                              placeholder="Enter any words to remove from the filter",
+                              required=False, max_length=1000)
+
+        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+
+        async def on_submit(self, interaction: Interaction):
+            add = self.add.value
+            remove = self.remove.value
+
+            if not add and not remove:
+                embed = discord.Embed(title="No Words found",
+                                      description="Please enter some words to either add or remove from the chat filter.",
+                                      colour=discord.Colour.dark_red())
+            else:
+                guild_id = interaction.guild.id
+                chat_filter = self.main_view.cog.getChatFilter(interaction.guild)
+                msg = []
+
+                if add:
+                    to_add = add.replace(" ", "")
+                    to_add = to_add.replace("'", "")
+                    to_add = to_add.replace("\"", "")
+                    to_add = to_add.lower()
+                    to_add = to_add.split(",")
+                    to_add = list(dict.fromkeys(to_add))  # remove duplicates
+
+                    for word in to_add:
+                        if word not in chat_filter:
+                            chat_filter.append(word)
+                            msg.append(f'Added `{word}`')
+                        else:
+                            msg.append(f'`{word}` is already in the filter')
+
+                if remove:
                     if remove.lower() == "all":
                         chat_filter = []
                         msg.append(f'Chat Filter has been `cleared`')
+                    else:
+                        to_remove = remove.replace(" ", "")
+                        to_remove = to_remove.replace("'", "")
+                        to_remove = to_remove.replace("\"", "")
+                        to_remove = to_remove.lower()
+                        to_remove = to_remove.split(",")
+                        to_remove = list(dict.fromkeys(to_remove))  # remove duplicates
+
+                        for word in to_remove:
+                            if word in chat_filter:
+                                chat_filter.remove(word)
+                                msg.append(f'Removed `{word}`')
+                            else:
+                                msg.append(f'`{word}` is not in the filter')
+
+                # Save to postgreSQL
+                query = "UPDATE guilds SET chat_filter = $1 WHERE guild_id = $2;"
+                async with self.bot.pool.acquire() as conn:
+                    async with conn.transaction():
+                        await conn.execute(query, chat_filter, guild_id)
+
+                # Save in memory
+                self.bot.guild_settings[str(guild_id)]["chat_filter"] = chat_filter
+
+                embed = discord.Embed(title="Chat Filter Updated")
+                embed.description = '\n'.join(msg)[0:4000]
+                embed.colour = discord.Colour.green()
+
+                await self.main_view.refreshEmbed()
+
+            embed.set_footer(text="You can add/remove multiple words at once by using commas such as 'a, b'.\nUse 'all' in the remove words field to clear the filter.")
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
     class ModLogChannelModel(ui.Modal):
