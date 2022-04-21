@@ -19,11 +19,26 @@ else:
     token = TOKEN
     prefix = PREFIX
 
+
+# Bot prefix function
+def get_prefix(bot, msg):
+    prefix = bot.default_prefix
+
+    if msg.guild:
+        guild_id = msg.guild.id
+        if str(guild_id) in bot.guild_settings:
+            if "prefix" in bot.guild_settings[str(guild_id)]:
+                prefix = bot.guild_settings[str(guild_id)]["prefix"]
+
+    return commands.when_mentioned_or(prefix)(bot, msg)
+
+
 # Define bot
-bot = commands.Bot(command_prefix=commands.when_mentioned_or(*[prefix]), owner_id=452187819738267687,
+bot = commands.Bot(command_prefix=get_prefix, owner_id=452187819738267687,
                    case_insensitive=True,
                    allowed_mentions=discord.AllowedMentions(roles=False, everyone=False, replied_user=False, users=True),
                    intents=discord.Intents.all(), help_command=None)
+bot.default_prefix = prefix
 
 
 # Setup Context Menus
@@ -41,11 +56,7 @@ async def globalReportUser(interaction: discord.Interaction, member: discord.Mem
 @bot.event
 async def on_ready():
     log.info(f'Bot online! Connected to {(len(bot.guilds))} Discord Servers.')
-
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'{len(bot.guilds)} guilds'))
-
-    if not hasattr(bot, 'uptime'):  # prevent reconnects to the websocket resetting bot's start time
-        bot.uptime = discord.utils.utcnow()
 
 
 @bot.event
