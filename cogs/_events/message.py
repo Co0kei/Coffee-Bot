@@ -30,6 +30,10 @@ class MessageCog(commands.Cog):
 
         settingsCommand = self.bot.get_cog("SettingsCommand")
 
+        if settingsCommand.getChatFilter(message.guild):
+            message_deleted = await self.bot.get_cog("ChatFilterCog").handleChat(message)
+            if message_deleted: return
+
         if settingsCommand.isInviteFilterEnabled(message.guild):
             message_deleted = await self.bot.get_cog("InviteFilterCog").handleInvite(message)
             if message_deleted: return
@@ -56,6 +60,10 @@ class MessageCog(commands.Cog):
             return
 
         settingsCommand = self.bot.get_cog("SettingsCommand")
+
+        if settingsCommand.getChatFilter(after.guild):
+            message_deleted = await self.bot.get_cog("ChatFilterCog").handleChatEdit(before, after)
+            if message_deleted: return
 
         if settingsCommand.isInviteFilterEnabled(after.guild):
             message_deleted = await self.bot.get_cog("InviteFilterCog").handleInviteEdit(before, after)
