@@ -164,8 +164,8 @@ class SettingsCommand(commands.Cog):
 
                 discord.SelectOption(label='Reports', description='Setup how reports are handled', emoji='<:admin:965698068831944734>'),
                 discord.SelectOption(label='Moderation', description='Setup moderation', emoji='<:moderation:965698068706119730>'),
-                discord.SelectOption(label='Logs', description='Setup extensive audit logging', emoji='🏷️'),
-                discord.SelectOption(label='Misc', description='Set miscellaneous settings', emoji='⚙'),
+                discord.SelectOption(label='Logs', description='Setup extensive audit logging', emoji='<:logs:966670156925390928>'),
+                discord.SelectOption(label='Misc', description='Setup miscellaneous properties', emoji='<:settings:966670162877087764>'),
             ]
 
             super().__init__(min_values=1, max_values=1, options=options)
@@ -183,15 +183,15 @@ class SettingsCommand(commands.Cog):
         """ Returns the settings embed"""
 
         if type == SettingPage.Reports:
-            embed = discord.Embed(description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
-            embed.set_author(name="Report Settings")
+            embed = discord.Embed(title="Settings", description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
+            embed.set_author(name="Reports", icon_url="https://cdn.discordapp.com/attachments/878620836284747788/966669223134900224/dev2.png")
 
             reports_channel = self.getReportsChannel(guild)
             if reports_channel:
                 reports_channel = reports_channel.mention
             else:
                 reports_channel = "`None`"
-            embed.add_field(name='**Reports Channel**',
+            embed.add_field(name='<:channel:966662246581301308> **Reports Channel**',
                             value=f"_Description_: Set a channel for reports to get sent to.\n"
                                   f"_Value_: {reports_channel}", inline=False)
 
@@ -200,7 +200,7 @@ class SettingsCommand(commands.Cog):
                 reports_alert_role = reports_alert_role.mention
             else:
                 reports_alert_role = "`None`"
-            embed.add_field(name='**Reports Alert Role**',
+            embed.add_field(name='<:role:966666974438490152> **Reports Alert Role**',
                             value=f"_Description_: Set a role to get pinged each time a report is received.\n"
                                   f"_Value_: {reports_alert_role}", inline=False)
 
@@ -209,7 +209,7 @@ class SettingsCommand(commands.Cog):
                 reports_banned_role = reports_banned_role.mention
             else:
                 reports_banned_role = "`None`"
-            embed.add_field(name='**Reports Banned Role**',
+            embed.add_field(name='<:role:966664821527412857> **Reports Banned Role**',
                             value=f"_Description_: Set a role that prevents members with it from creating reports.\n"
                                   f"_Value_: {reports_banned_role}", inline=False)
 
@@ -217,7 +217,7 @@ class SettingsCommand(commands.Cog):
                 report_self = "`Enabled` <:tick:873224615881748523>"
             else:
                 report_self = "`Disabled` <:cross:872834807476924506>"
-            embed.add_field(name='**Report Self**',
+            embed.add_field(name='\U0001f465 **Report Self**',
                             value=f"_Description_: Set whether members can report themselves.\n"
                                   f"_Value_: {report_self}", inline=False)
 
@@ -225,7 +225,7 @@ class SettingsCommand(commands.Cog):
                 report_bots = "`Enabled` <:tick:873224615881748523>"
             else:
                 report_bots = "`Disabled` <:cross:872834807476924506>"
-            embed.add_field(name='**Report Bots**',
+            embed.add_field(name='<:bot:966666994357248031> **Report Bots**',
                             value=f"_Description_: Set whether members can report bots.\n"
                                   f"_Value_: {report_bots}", inline=False)
 
@@ -233,20 +233,20 @@ class SettingsCommand(commands.Cog):
                 report_admins = "`Enabled` <:tick:873224615881748523>"
             else:
                 report_admins = "`Disabled` <:cross:872834807476924506>"
-            embed.add_field(name='**Report Admins**',
+            embed.add_field(name='<:admin:966668904313270322> **Report Admins**',
                             value=f"_Description_: Set whether members can report server admins.\n"
                                   f"_Value_: {report_admins}", inline=False)
             return embed
 
         elif type == SettingPage.Moderation:
-            embed = discord.Embed(description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
-            embed.set_author(name="Moderation Settings")
+            embed = discord.Embed(title="Settings", description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
+            embed.set_author(name="Moderation", icon_url="https://cdn.discordapp.com/attachments/878620836284747788/966669507856838676/moderation.png")
 
             if self.isInviteFilterEnabled(guild):
                 invite_filter = "`Enabled` <:tick:873224615881748523>"
             else:
                 invite_filter = "`Disabled` <:cross:872834807476924506>"
-            embed.add_field(name='**Invite Filter**',
+            embed.add_field(name='<:invite:966673137741729872> **Invite Filter**',
                             value=f"_Description_: Set whether members can post Discord server invites.\n"
                                   f"_Value_: {invite_filter}", inline=False)
 
@@ -254,7 +254,7 @@ class SettingsCommand(commands.Cog):
                 link_filter = "`Enabled` <:tick:873224615881748523>"
             else:
                 link_filter = "`Disabled` <:cross:872834807476924506>"
-            embed.add_field(name='**Link Filter**',
+            embed.add_field(name='<:link:966673134033989645> **Link Filter**',
                             value=f"_Description_: Set whether members can post links.\n"
                                   f"_Value_: {link_filter}", inline=False)
 
@@ -263,7 +263,7 @@ class SettingsCommand(commands.Cog):
                 whitelisted_links = f'`{", ".join(whitelisted_links)}`'
             else:
                 whitelisted_links = "`None`"
-            embed.add_field(name='**Whitelisted Links**',
+            embed.add_field(name='<:Whitelist:966673595583586354> **Whitelisted Links**',
                             value=f"_Description_: Set links which members are allowed to post.\n"
                                   f"_Value_: {whitelisted_links}"[0:1024], inline=False)
 
@@ -272,19 +272,19 @@ class SettingsCommand(commands.Cog):
                 mod_log_channel = mod_log_channel.mention
             else:
                 mod_log_channel = "`None`"
-            embed.add_field(name='**Mod Log Channel**',
+            embed.add_field(name='<:channel:966662246581301308> **Mod Log Channel**',
                             value=f"_Description_: Set a channel that notifies you of attempts to bypass the invite / link filter.\n"
                                   f"_Value_: {mod_log_channel}", inline=False)
             return embed
 
         elif type == SettingPage.Logs:
-            embed = discord.Embed(description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
-            embed.set_author(name="Log Settings")
+            embed = discord.Embed(title="Settings", description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
+            embed.set_author(name="Logs", icon_url="https://cdn.discordapp.com/attachments/878620836284747788/966669748358250587/IconLogs.gif")
             return embed
 
         elif type == SettingPage.Misc:
-            embed = discord.Embed(description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
-            embed.set_author(name="Miscellaneous Settings")
+            embed = discord.Embed(title="Settings", description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
+            embed.set_author(name="Miscellaneous", icon_url="https://cdn.discordapp.com/attachments/878620836284747788/966669697149992990/Discord_settings.png")
             embed.add_field(name=':grey_exclamation: **Prefix**',
                             value=f"_Description_: Set the prefix for any non slash commands to respond to.\n"
                                   f"_Value_: `{self.getPrefix(guild)}`", inline=False)
@@ -295,31 +295,34 @@ class SettingsCommand(commands.Cog):
 
         if type == SettingPage.Reports:
             return [
-                discord.ui.Button(custom_id="Reports Channel", style=discord.ButtonStyle.green, row=1),
-                discord.ui.Button(custom_id="Reports Alert Role", style=discord.ButtonStyle.green, row=1),
-                discord.ui.Button(custom_id="Reports Banned Role", style=discord.ButtonStyle.green, row=1),
+                discord.ui.Button(custom_id="Reports Channel", style=discord.ButtonStyle.blurple, emoji="<:channel:966662246581301308>", row=1),
+                discord.ui.Button(custom_id="Reports Alert Role", style=discord.ButtonStyle.blurple, emoji="<:role:966666974438490152>", row=1),
+                discord.ui.Button(custom_id="Reports Banned Role", style=discord.ButtonStyle.blurple, emoji="<:role:966664821527412857>", row=1),
 
-                discord.ui.Button(custom_id="Report Self", style=discord.ButtonStyle.green if self.isReportSelfEnabled(guild) else discord.ButtonStyle.red, row=2),
-                discord.ui.Button(custom_id="Report Bots", style=discord.ButtonStyle.green if self.isReportBotsEnabled(guild) else discord.ButtonStyle.red, row=2),
-                discord.ui.Button(custom_id="Report Admins", style=discord.ButtonStyle.green if self.isReportAdminsEnabled(guild) else discord.ButtonStyle.red, row=2)
+                discord.ui.Button(custom_id="Report Self", style=discord.ButtonStyle.green if self.isReportSelfEnabled(guild) else discord.ButtonStyle.red, emoji="\U0001f465", row=2),
+                discord.ui.Button(custom_id="Report Bots", style=discord.ButtonStyle.green if self.isReportBotsEnabled(guild) else discord.ButtonStyle.red, emoji="<:bot:966666994357248031>", row=2),
+                discord.ui.Button(custom_id="Report Admins", style=discord.ButtonStyle.green if self.isReportAdminsEnabled(guild) else discord.ButtonStyle.red, emoji="<:admin:966668904313270322>",
+                                  row=2)
             ]
         elif type == SettingPage.Moderation:
             return [
-                discord.ui.Button(custom_id="Invite Filter", style=discord.ButtonStyle.green if self.isInviteFilterEnabled(guild) else discord.ButtonStyle.red, row=1),
-                discord.ui.Button(custom_id="Link Filter", style=discord.ButtonStyle.green if self.isLinkFilterEnabled(guild) else discord.ButtonStyle.red, row=1),
-                discord.ui.Button(custom_id="Whitelisted Links", style=discord.ButtonStyle.green, row=1),
-                discord.ui.Button(custom_id="Mod Log Channel", style=discord.ButtonStyle.green, row=1)
+                discord.ui.Button(custom_id="Invite Filter", style=discord.ButtonStyle.green if self.isInviteFilterEnabled(guild) else discord.ButtonStyle.red, emoji="<:invite:966673137741729872>",
+                                  row=1),
+                discord.ui.Button(custom_id="Link Filter", style=discord.ButtonStyle.green if self.isLinkFilterEnabled(guild) else discord.ButtonStyle.red, emoji="<:link:966673134033989645>",
+                                  row=1),
+                discord.ui.Button(custom_id="Whitelisted Links", style=discord.ButtonStyle.blurple, emoji="<:Whitelist:966673595583586354>", row=1),
+                discord.ui.Button(custom_id="Mod Log Channel", style=discord.ButtonStyle.blurple, emoji="<:channel:966662246581301308>", row=1)
             ]
         elif type == SettingPage.Logs:
             return [
-                discord.ui.Button(custom_id="Message Delete Self", style=discord.ButtonStyle.green, row=1),
-                discord.ui.Button(custom_id="Message Delete Other", style=discord.ButtonStyle.green, row=1),
-                discord.ui.Button(custom_id="Message Edit", style=discord.ButtonStyle.green, row=1),
+                discord.ui.Button(custom_id="Message Delete Self", style=discord.ButtonStyle.blurple, row=1),
+                discord.ui.Button(custom_id="Message Delete Other", style=discord.ButtonStyle.blurple, row=1),
+                discord.ui.Button(custom_id="Message Edit", style=discord.ButtonStyle.blurple, row=1),
             ]
 
         elif type == SettingPage.Misc:
             return [
-                discord.ui.Button(custom_id="Prefix", style=discord.ButtonStyle.green, emoji="\U00002755", row=1),
+                discord.ui.Button(custom_id="Prefix", style=discord.ButtonStyle.blurple, emoji="\U00002755", row=1),
             ]
 
     def checkValidChannel(self, reportsChannel: str, guild: discord.Guild) -> discord.TextChannel:
@@ -440,8 +443,6 @@ class SettingsCommand(commands.Cog):
 
         await main_view.refreshEmbed(interaction=interaction, reloadView=True)  # Update main embed
 
-        log.info(self.bot.guild_settings[str(guild_id)])
-
     async def toggleReportBots(self, interaction: discord.Interaction, main_view: discord.ui.View):
         guild_id = interaction.guild.id
         report_bots = not self.isReportBotsEnabled(guild=interaction.guild)
@@ -456,8 +457,6 @@ class SettingsCommand(commands.Cog):
         self.bot.guild_settings[str(guild_id)]["report_bots"] = report_bots
 
         await main_view.refreshEmbed(interaction=interaction, reloadView=True)  # Update main embed
-
-        log.info(self.bot.guild_settings[str(guild_id)])
 
     async def toggleReportAdmins(self, interaction: discord.Interaction, main_view: discord.ui.View):
         guild_id = interaction.guild.id
@@ -474,8 +473,6 @@ class SettingsCommand(commands.Cog):
 
         await main_view.refreshEmbed(interaction=interaction, reloadView=True)  # Update main embed
 
-        log.info(self.bot.guild_settings[str(guild_id)])
-
     async def toggleInviteFilter(self, interaction: discord.Interaction, main_view: discord.ui.View):
         guild_id = interaction.guild.id
         invite_filter = not self.isInviteFilterEnabled(guild=interaction.guild)
@@ -491,8 +488,6 @@ class SettingsCommand(commands.Cog):
 
         await main_view.refreshEmbed(interaction=interaction, reloadView=True)  # Update main embed
 
-        log.info(self.bot.guild_settings[str(guild_id)])
-
     async def toggleLinkFilter(self, interaction: discord.Interaction, main_view: discord.ui.View):
         guild_id = interaction.guild.id
         link_filter = not self.isLinkFilterEnabled(guild=interaction.guild)
@@ -507,8 +502,6 @@ class SettingsCommand(commands.Cog):
         self.bot.guild_settings[str(guild_id)]["link_filter"] = link_filter
 
         await main_view.refreshEmbed(interaction=interaction, reloadView=True)  # Update main embed
-
-        log.info(self.bot.guild_settings[str(guild_id)])
 
     # BUTTON MODALS
     class ReportsChannelModel(ui.Modal):
@@ -567,7 +560,6 @@ class SettingsCommand(commands.Cog):
                 await self.main_view.refreshEmbed()
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
-            log.info(self.bot.guild_settings[str(guild_id)])
 
     class ReportsAlertRoleModel(ui.Modal):
         def __init__(self, bot=None, main_view=None):
@@ -628,7 +620,6 @@ class SettingsCommand(commands.Cog):
                 await self.main_view.refreshEmbed()
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
-            log.info(self.bot.guild_settings[str(guild_id)])
 
     class ReportsBannedRoleModel(ui.Modal):
         def __init__(self, bot=None, main_view=None):
@@ -688,7 +679,6 @@ class SettingsCommand(commands.Cog):
                 await self.main_view.refreshEmbed()
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
-            log.info(self.bot.guild_settings[str(guild_id)])
 
     class WhitelistedLinkModel(ui.Modal):
         def __init__(self, bot=None, main_view=None):
@@ -840,7 +830,6 @@ class SettingsCommand(commands.Cog):
                 await self.main_view.refreshEmbed()
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
-            log.info(self.bot.guild_settings[str(guild_id)])
 
     class PrefixModel(ui.Modal):
         def __init__(self, bot=None, main_view=None):
@@ -873,8 +862,6 @@ class SettingsCommand(commands.Cog):
             self.bot.guild_settings[str(guild_id)]["prefix"] = new_prefix
 
             await self.main_view.refreshEmbed(interaction=interaction)  # Update main embed
-
-            log.info(self.bot.guild_settings[str(guild_id)])
 
 
 async def setup(bot):
