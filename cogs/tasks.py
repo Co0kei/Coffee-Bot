@@ -1,5 +1,8 @@
+import asyncio
 import logging
 import time
+import traceback
+from typing import Any
 
 import discord.utils
 from discord.ext import commands, tasks
@@ -20,7 +23,8 @@ class TaskCog(commands.Cog):
     @tasks.loop(minutes=1.0)
     async def updater(self):
         cmd = self.bot.get_command("dump")
-        await cmd(None)
+        if cmd:  # make sure not NONE
+            await cmd(None)
 
         # check if the monthly vote count has reset - at midnight UTC. Updates after the first monthly vote on top.gg
         time_now = discord.utils.utcnow()
@@ -70,6 +74,17 @@ class TaskCog(commands.Cog):
     @updater.before_loop
     async def before_updater(self):
         await self.bot.wait_until_ready()
+
+    @updater.error
+    async def on_updater_error(self, *args: Any) -> None:
+        exception: Exception = args[-1]
+        log.error(f'Unhandled exception in internal background task updater')
+        traceback.print_exception(type(exception), exception, exception.__traceback__)
+
+        await asyncio.sleep(5)
+        log.info("Restarting task...")
+
+        self.updater.restart()
 
 
 async def setup(bot):
