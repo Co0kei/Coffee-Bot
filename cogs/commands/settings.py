@@ -148,6 +148,17 @@ class SettingsCommand(commands.Cog):
                 model = self.cog.ModLogChannelModel(self.bot, self)
                 await interaction.response.send_modal(model)
 
+            # logs
+            elif button == "Message Delete":
+                model = self.cog.MessageDeleteChannelModel(self.bot, self)
+                await interaction.response.send_modal(model)
+            elif button == "Mod Message Delete":
+                model = self.cog.ModMessageDeleteChannelModel(self.bot, self)
+                await interaction.response.send_modal(model)
+            elif button == "Message Edit":
+                model = self.cog.MessageEditChannelModel(self.bot, self)
+                await interaction.response.send_modal(model)
+
             # misc
             elif button == "Prefix":
                 prefixModel = self.cog.PrefixModel(self.bot, self)
@@ -272,7 +283,7 @@ class SettingsCommand(commands.Cog):
 
             chat_filter = self.getChatFilter(guild)
             if chat_filter:
-                chat_filter = f'`{", ".join(chat_filter)}`'
+                chat_filter = f'||`{", ".join(chat_filter)}`||'
             else:
                 chat_filter = "`None`"
             embed.add_field(name='<:chat:966783738547691520> **Chat Filter**',
@@ -292,6 +303,34 @@ class SettingsCommand(commands.Cog):
         elif type == SettingPage.Logs:
             embed = discord.Embed(title="Settings", description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
             embed.set_author(name="Logs", icon_url="https://cdn.discordapp.com/attachments/878620836284747788/966669748358250587/IconLogs.gif")
+
+            msg_delete_channel = self.getMsgDeleteChannel(guild)
+            if msg_delete_channel:
+                msg_delete_channel = msg_delete_channel.mention
+            else:
+                msg_delete_channel = "`None`"
+            embed.add_field(name=':grey_exclamation: **Message Delete**',
+                            value=f"_Description_: Logs a deleted message when a member deletes their own message or a bot deletes their message.\n"
+                                  f"_Value_: {msg_delete_channel}", inline=False)
+
+            mod_msg_delete_channel = self.getModMsgDeleteChannel(guild)
+            if mod_msg_delete_channel:
+                mod_msg_delete_channel = mod_msg_delete_channel.mention
+            else:
+                mod_msg_delete_channel = "`None`"
+            embed.add_field(name=':grey_exclamation: **Mod Message Delete**',
+                            value=f"_Description_: Logs a deleted message when a human deletes another members message. Includes bulk message deletes.\n"
+                                  f"_Value_: {mod_msg_delete_channel}", inline=False)
+
+            msg_edit_channel = self.getMsgEditChannel(guild)
+            if msg_edit_channel:
+                msg_edit_channel = msg_edit_channel.mention
+            else:
+                msg_edit_channel = "`None`"
+            embed.add_field(name=':grey_exclamation: **Message Edit**',
+                            value=f"_Description_: Logs when a member edits their message.\n"
+                                  f"_Value_: {msg_edit_channel}", inline=False)
+
             return embed
 
         elif type == SettingPage.Misc:
@@ -328,8 +367,8 @@ class SettingsCommand(commands.Cog):
             ]
         elif type == SettingPage.Logs:
             return [
-                discord.ui.Button(custom_id="Message Delete Self", style=discord.ButtonStyle.blurple, row=1),
-                discord.ui.Button(custom_id="Message Delete Other", style=discord.ButtonStyle.blurple, row=1),
+                discord.ui.Button(custom_id="Message Delete", style=discord.ButtonStyle.blurple, row=1),
+                discord.ui.Button(custom_id="Mod Message Delete", style=discord.ButtonStyle.blurple, row=1),
                 discord.ui.Button(custom_id="Message Edit", style=discord.ButtonStyle.blurple, row=1),
             ]
 
@@ -439,6 +478,27 @@ class SettingsCommand(commands.Cog):
             if "chat_filter" in self.bot.guild_settings[str(guild.id)]:
                 chat_filter = self.bot.guild_settings[str(guild.id)]["chat_filter"]
         return chat_filter
+
+    def getMsgDeleteChannel(self, guild: discord.Guild) -> discord.TextChannel:
+        msg_delete_channel = None
+        if str(guild.id) in self.bot.guild_settings:
+            if "msg_delete_channel_id" in self.bot.guild_settings[str(guild.id)]:
+                msg_delete_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["msg_delete_channel_id"])
+        return msg_delete_channel
+
+    def getModMsgDeleteChannel(self, guild: discord.Guild) -> discord.TextChannel:
+        mod_msg_delete_channel = None
+        if str(guild.id) in self.bot.guild_settings:
+            if "mod_msg_delete_channel_id" in self.bot.guild_settings[str(guild.id)]:
+                mod_msg_delete_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["mod_msg_delete_channel_id"])
+        return mod_msg_delete_channel
+
+    def getMsgEditChannel(self, guild: discord.Guild) -> discord.TextChannel:
+        msg_edit_channel = None
+        if str(guild.id) in self.bot.guild_settings:
+            if "msg_edit_channel_id" in self.bot.guild_settings[str(guild.id)]:
+                msg_edit_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["msg_edit_channel_id"])
+        return msg_edit_channel
 
     def getPrefix(self, guild: discord.Guild) -> str:
         prefix = self.bot.default_prefix
@@ -941,6 +1001,182 @@ class SettingsCommand(commands.Cog):
                 await self.main_view.refreshEmbed()
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    class MessageDeleteChannelModel(ui.Modal):
+        def __init__(self, bot=None, main_view=None):
+            super().__init__(title="Message Delete Channel")
+            self.bot = bot
+            self.main_view = main_view
+
+        channel = ui.TextInput(label='Message Delete Channel', style=discord.TextStyle.short,
+                               placeholder="Please enter the channel name, such as #logs",
+                               required=True, max_length=1000)
+
+        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+
+        async def on_submit(self, interaction: Interaction):
+            guild_id = interaction.guild.id
+            msgDeleteChannel = self.channel.value.lower()
+            channel = self.main_view.cog.checkValidChannel(msgDeleteChannel, interaction.guild)
+
+            if msgDeleteChannel == "none" or msgDeleteChannel == "reset":
+                embed = discord.Embed(title="Channel reset", description="You have removed the Message Delete Channel.", colour=discord.Colour.green())
+
+                if "msg_delete_channel_id" in self.bot.guild_settings[str(guild_id)]:
+                    # Save to postgreSQL - NONE
+                    query = "UPDATE guilds SET msg_delete_channel_id = $1 WHERE guild_id = $2;"
+                    async with self.bot.pool.acquire() as conn:
+                        async with conn.transaction():
+                            await conn.execute(query, None, guild_id)
+
+                    # Save in memory
+                    del self.bot.guild_settings[str(guild_id)]["msg_delete_channel_id"]
+
+                    await self.main_view.refreshEmbed()
+
+            elif channel is None:
+                embed = discord.Embed(title="Channel not found",
+                                      description="Please enter a valid channel name.\nTo remove the current channel, enter `reset` instead of a channel name.",
+                                      colour=discord.Colour.dark_red())
+            else:
+                embed = discord.Embed(title="Message Delete Channel Updated", description=f"Successfully updated the message delete channel to {channel.mention}", colour=discord.Colour.green())
+
+                # Save to postgreSQL
+                query = "UPDATE guilds SET msg_delete_channel_id = $1 WHERE guild_id = $2;"
+                async with self.bot.pool.acquire() as conn:
+                    async with conn.transaction():
+                        await conn.execute(query, channel.id, guild_id)
+
+                # Save in memory
+                self.bot.guild_settings[str(guild_id)]["msg_delete_channel_id"] = channel.id
+
+                await self.main_view.refreshEmbed()
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # log.info(self.bot.guild_settings[str(guild_id)])
+
+    class ModMessageDeleteChannelModel(ui.Modal):
+        def __init__(self, bot=None, main_view=None):
+            super().__init__(title="Mod Message Delete Channel")
+            self.bot = bot
+            self.main_view = main_view
+
+        channel = ui.TextInput(label='Mod Message Delete Channel', style=discord.TextStyle.short,
+                               placeholder="Please enter the channel name, such as #logs",
+                               required=True, max_length=1000)
+
+        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+
+        async def on_submit(self, interaction: Interaction):
+            guild_id = interaction.guild.id
+            modMsgDeleteChannel = self.channel.value.lower()
+            channel = self.main_view.cog.checkValidChannel(modMsgDeleteChannel, interaction.guild)
+
+            if modMsgDeleteChannel == "none" or modMsgDeleteChannel == "reset":
+                embed = discord.Embed(title="Channel reset", description="You have removed the Mod Message Delete Channel.", colour=discord.Colour.green())
+
+                if "mod_msg_delete_channel_id" in self.bot.guild_settings[str(guild_id)]:
+                    # Save to postgreSQL - NONE
+                    query = "UPDATE guilds SET mod_msg_delete_channel_id = $1 WHERE guild_id = $2;"
+                    async with self.bot.pool.acquire() as conn:
+                        async with conn.transaction():
+                            await conn.execute(query, None, guild_id)
+
+                    # Save in memory
+                    del self.bot.guild_settings[str(guild_id)]["mod_msg_delete_channel_id"]
+
+                    await self.main_view.refreshEmbed()
+
+            elif channel is None:
+                embed = discord.Embed(title="Channel not found",
+                                      description="Please enter a valid channel name.\nTo remove the current channel, enter `reset` instead of a channel name.",
+                                      colour=discord.Colour.dark_red())
+            else:
+                embed = discord.Embed(title="Mod Message Delete Channel Updated", description=f"Successfully updated the mod message delete channel to {channel.mention}",
+                                      colour=discord.Colour.green())
+
+                # Save to postgreSQL
+                query = "UPDATE guilds SET mod_msg_delete_channel_id = $1 WHERE guild_id = $2;"
+                async with self.bot.pool.acquire() as conn:
+                    async with conn.transaction():
+                        await conn.execute(query, channel.id, guild_id)
+
+                # Save in memory
+                self.bot.guild_settings[str(guild_id)]["mod_msg_delete_channel_id"] = channel.id
+
+                await self.main_view.refreshEmbed()
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # log.info(self.bot.guild_settings[str(guild_id)])
+
+    class MessageEditChannelModel(ui.Modal):
+        def __init__(self, bot=None, main_view=None):
+            super().__init__(title="Message Edit Channel")
+            self.bot = bot
+            self.main_view = main_view
+
+        channel = ui.TextInput(label='Message Edit Channel', style=discord.TextStyle.short,
+                               placeholder="Please enter the channel name, such as #logs",
+                               required=True, max_length=1000)
+
+        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+
+        async def on_submit(self, interaction: Interaction):
+            guild_id = interaction.guild.id
+            msgEditChannel = self.channel.value.lower()
+            channel = self.main_view.cog.checkValidChannel(msgEditChannel, interaction.guild)
+
+            if msgEditChannel == "none" or msgEditChannel == "reset":
+                embed = discord.Embed(title="Channel reset", description="You have removed the Message Edit Channel.", colour=discord.Colour.green())
+
+                if "msg_edit_channel_id" in self.bot.guild_settings[str(guild_id)]:
+                    # Save to postgreSQL - NONE
+                    query = "UPDATE guilds SET msg_edit_channel_id = $1 WHERE guild_id = $2;"
+                    async with self.bot.pool.acquire() as conn:
+                        async with conn.transaction():
+                            await conn.execute(query, None, guild_id)
+
+                    # Save in memory
+                    del self.bot.guild_settings[str(guild_id)]["msg_edit_channel_id"]
+
+                    await self.main_view.refreshEmbed()
+
+            elif channel is None:
+                embed = discord.Embed(title="Channel not found",
+                                      description="Please enter a valid channel name.\nTo remove the current channel, enter `reset` instead of a channel name.",
+                                      colour=discord.Colour.dark_red())
+            else:
+                embed = discord.Embed(title="Message Edit Channel Updated", description=f"Successfully updated the message edit channel to {channel.mention}",
+                                      colour=discord.Colour.green())
+
+                # Save to postgreSQL
+                query = "UPDATE guilds SET msg_edit_channel_id = $1 WHERE guild_id = $2;"
+                async with self.bot.pool.acquire() as conn:
+                    async with conn.transaction():
+                        await conn.execute(query, channel.id, guild_id)
+
+                # Save in memory
+                self.bot.guild_settings[str(guild_id)]["msg_edit_channel_id"] = channel.id
+
+                await self.main_view.refreshEmbed()
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # log.info(self.bot.guild_settings[str(guild_id)])
 
     class PrefixModel(ui.Modal):
         def __init__(self, bot=None, main_view=None):
