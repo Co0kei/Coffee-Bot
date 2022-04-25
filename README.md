@@ -1,11 +1,10 @@
 ## Welcome to Coffee Bot
 
-> #### Coffee Bot is an **open source** bot specialising in reports!
+> #### Coffee Bot is an **open source** bot with some nifty features:
 >
-> - Coffee Bot has a *simple* yet **effective** reporting system which uses context menus to handle user and member reports (detailed examples with images on my top.gg page).
-> - A Discord text input modal (new Discord feature) will open which allows you to give a reason for your report.
-> - The report is then send to a special channel to be handled by your server's staff team.
-> - Coffee Bot also handles Discord server invites with a togglable filter and optional log channel.
+> - A *simple* yet **effective** reporting system which uses context menus to handle user and member reports (detailed examples with images on my top.gg page).
+> - A Discord server invite filter, link filter and chat filter - all with an optional log channel.
+>
 
 ### **For a detailed list of commands, features and examples, visit my [top.gg](https://top.gg/bot/950765718209720360) page!**
 
