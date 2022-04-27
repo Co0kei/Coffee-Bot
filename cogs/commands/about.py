@@ -55,7 +55,8 @@ class AboutCommand(commands.Cog):
                 elif isinstance(channel, discord.VoiceChannel):
                     voice += 1
 
-        embed.add_field(name="Latest Commits", value=self.get_last_commits(), inline=False)
+        embed.description = f"**Latest Commits**\n{self.get_last_commits()[0:4096]}"
+        # embed.add_field(name="Latest Commits", value=self.get_last_commits()[0:1024], inline=False)
 
         bots = sum(u.bot for u in self.bot.users)
         embed.add_field(name='Members', value=f'{total_members:,} total\n{total_unique:,} unique\n{bots:,} bots')
