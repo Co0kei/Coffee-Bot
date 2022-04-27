@@ -1,6 +1,7 @@
 import logging
 import re
 from datetime import timedelta
+from io import BytesIO
 
 import discord
 from discord import NotFound
@@ -39,19 +40,38 @@ class LinkFilterCog(commands.Cog):
                 embed.set_author(name="Link Posted", icon_url=message.author.display_avatar.url)
                 embed.colour = discord.Colour(0x2F3136)
                 embedDescription = f'{message.author.mention} ({message.author}) tried to post a link.\n\n'
-                embedDescription += f'**Message Content:**\n`{message.clean_content[0:2000]}`'  # only display first 2000 chars
-                embedDescription += f'\n\n**Message\'s Info:**\n' \
+                embedDescription += f'**Message\'s Info:**\n' \
                                     f'Message ID: `{message.id}`\n' \
                                     f'Channel: {message.channel.mention}\n' \
                                     f'Time: {discord.utils.format_dt(message.created_at, "F")} ({discord.utils.format_dt(message.created_at, "R")})\n' \
                                     f'Attachments: `{len(message.attachments)}`'
+
+                msg_content = message.clean_content.replace("`", "")
+                embedDescription += f'\n\n**Message Content:**\n`{msg_content}`'
+
                 if len(message.attachments) != 0:
                     attachement1 = message.attachments[0]
                     if attachement1.content_type.startswith("image"):
                         embed.set_image(url=attachement1.url)
                         embedDescription += f"\n\n**Message Image:**"
                 embed.description = embedDescription
-                await modLogChannel.send(embed=embed)
+
+                file = None
+                content = None
+                if len(embed.description) > 4096 or len(embed) > 6000:
+                    # attach as a file
+                    embed = None
+                    content = "**Link Filter!**"
+                    fileContent = f'{message.author} tried to post a link.\n\n' \
+                                  f'Message ID: {message.id}\n' \
+                                  f'Channel: #{message.channel}\n' \
+                                  f'Time (UTC): {message.created_at.strftime("%Y-%m-%d %H:%M-%S")}\n' \
+                                  f'Attachments: {len(message.attachments)}\n\n' \
+                                  f'Message Content:\n{message.clean_content}'
+                    buffer = BytesIO(fileContent.encode('utf-8'))
+                    file = discord.File(fp=buffer, filename='link_filter.txt')
+
+                await modLogChannel.send(content=content, embed=embed, file=file)
             return True
         else:
             return False
@@ -82,20 +102,43 @@ class LinkFilterCog(commands.Cog):
                 embed.set_author(name="Link Posted", icon_url=after.author.display_avatar.url)
                 embed.colour = discord.Colour(0x2F3136)
                 embedDescription = f'{after.author.mention} ({after.author}) tried to edit a link into a message.\n\n'
-                embedDescription += f'**Message Before:**\n`{before.clean_content[0:1000]}`\n\n'  # only display first 1000 chars
-                embedDescription += f'**Message After:**\n`{after.clean_content[0:1000]}`'  # only display first 1000 chars
-                embedDescription += f'\n\n**Message\'s Info:**\n' \
+
+                embedDescription += f'**Message\'s Info:**\n' \
                                     f'Message ID: `{after.id}`\n' \
                                     f'Channel: {after.channel.mention}\n' \
                                     f'Time: {discord.utils.format_dt(after.created_at, "F")} ({discord.utils.format_dt(after.created_at, "R")})\n' \
                                     f'Attachments: `{len(after.attachments)}`'
+
+                content_before = before.clean_content.replace("`", "")
+                content_after = after.clean_content.replace("`", "")
+
+                embedDescription += f'\n\n**Message Before:**\n`{content_before}`'
+                embedDescription += f'\n\n**Message After:**\n`{content_after}`'
+
                 if len(after.attachments) != 0:
                     attachement1 = after.attachments[0]
                     if attachement1.content_type.startswith("image"):
                         embed.set_image(url=attachement1.url)
                         embedDescription += f"\n\n**Message Image:**"
                 embed.description = embedDescription
-                await modLogChannel.send(embed=embed)
+
+                file = None
+                content = None
+                if len(embed.description) > 4096 or len(embed) > 6000:
+                    # attach as a file
+                    embed = None
+                    content = "**Link Filter!**"
+                    fileContent = f'{after.author} tried to edit a link into a message.\n\n' \
+                                  f'Message ID: {after.id}\n' \
+                                  f'Channel: #{after.channel}\n' \
+                                  f'Time (UTC): {after.created_at.strftime("%Y-%m-%d %H:%M-%S")}\n' \
+                                  f'Attachments: {len(after.attachments)}' \
+                                  f'\n\nMessage Content Before:\n{before.clean_content}' \
+                                  f'\n\nMessage Content After:\n{after.clean_content}'
+                    buffer = BytesIO(fileContent.encode('utf-8'))
+                    file = discord.File(fp=buffer, filename='link_filter.txt')
+
+                await modLogChannel.send(content=content, embed=embed, file=file)
             return True
         else:
             return False
