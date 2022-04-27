@@ -29,6 +29,11 @@ class AuditLogCog(commands.Cog):
                             f'Attachments: `{len(after.attachments)}`' \
                             f'\n\n**Message Content Before:**\n`{content_before} `' \
                             f'\n\n**Message Content After:**\n`{content_after} `'
+        if len(after.attachments) != 0:
+            attachement1 = after.attachments[0]
+            if attachement1.content_type.startswith("image"):
+                embed.set_image(url=attachement1.url)
+                embed.description += f"\n\n**Message Image:**"
 
         file = None
         content = None
@@ -48,6 +53,8 @@ class AuditLogCog(commands.Cog):
             buffer = BytesIO(fileContent.encode('utf-8'))
             file = discord.File(fp=buffer, filename='edited_message.txt')
 
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Jump to message", url=after.jump_url))
         settingsCog = self.bot.get_cog("SettingsCommand")
         await settingsCog.getMsgEditChannel(after.guild).send(content=content, embed=embed, file=file)
 
@@ -74,6 +81,13 @@ class AuditLogCog(commands.Cog):
                             f'Attachments: `{len(message.attachments)}`' \
                             f'\n\n**Message Content Before:**\nUnknown' \
                             f'\n\n**Message Content After:**\n`{content_after} `'
+                            f'\n\n**Message Content After:**\n`{content_after}`'
+
+        if len(message.attachments) != 0:
+            attachement1 = message.attachments[0]
+            if attachement1.content_type.startswith("image"):
+                embed.set_image(url=attachement1.url)
+                embed.description += f"\n\n**Message Image:**"
 
         file = None
         content = None
@@ -93,6 +107,8 @@ class AuditLogCog(commands.Cog):
             buffer = BytesIO(fileContent.encode('utf-8'))
             file = discord.File(fp=buffer, filename='edited_message.txt')
 
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Jump to message", url=message.jump_url))
         settingsCog = self.bot.get_cog("SettingsCommand")
         await settingsCog.getMsgEditChannel(guild).send(content=content, embed=embed, file=file)
 
