@@ -34,10 +34,12 @@ def get_prefix(bot, msg):
 
 
 # Define bot
+intents = discord.Intents.all()
+intents.typing = False
 bot = commands.Bot(command_prefix=get_prefix, owner_id=452187819738267687,
-                   case_insensitive=True,
+                   case_insensitive=True, max_messages=5000,
                    allowed_mentions=discord.AllowedMentions(roles=False, everyone=False, replied_user=False, users=True),
-                   intents=discord.Intents.all(), help_command=None)
+                   intents=intents, help_command=None)
 bot.default_prefix = prefix
 
 
