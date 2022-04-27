@@ -27,8 +27,9 @@ class AuditLogCog(commands.Cog):
                             f'Created: {discord.utils.format_dt(after.created_at, "F")} ({discord.utils.format_dt(after.created_at, "R")})\n' \
                             f'Message ID: `{after.id}`\n' \
                             f'Attachments: `{len(after.attachments)}`' \
-                            f'\n\n**Message Content Before:**\n`{content_before} `' \
-                            f'\n\n**Message Content After:**\n`{content_after} `'
+                            f'\n\n**Message Content Before:**\n`{content_before}`' \
+                            f'\n\n**Message Content After:**\n`{content_after}`'
+
         if len(after.attachments) != 0:
             attachement1 = after.attachments[0]
             if attachement1.content_type.startswith("image"):
@@ -37,7 +38,7 @@ class AuditLogCog(commands.Cog):
 
         file = None
         content = None
-        if len(embed) > 6000 or len(embed.description) > 4096:
+        if len(embed.description) > 4096 or len(embed) > 6000:
             # attach as a file
             embed = None
             content = "**Message Edit!**"
@@ -55,8 +56,9 @@ class AuditLogCog(commands.Cog):
 
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Jump to message", url=after.jump_url))
+
         settingsCog = self.bot.get_cog("SettingsCommand")
-        await settingsCog.getMsgEditChannel(after.guild).send(content=content, embed=embed, file=file)
+        await settingsCog.getMsgEditChannel(after.guild).send(content=content, embed=embed, file=file, view=view)
 
     async def handleRawEdit(self, payload: discord.RawMessageUpdateEvent, guild: discord.Guild):
         """ Message before is unknown """
@@ -71,7 +73,10 @@ class AuditLogCog(commands.Cog):
         embed.set_author(name="Message Edited", icon_url=message.author.display_avatar.url)
         embed.colour = discord.Colour(0x2F3136)
 
-        content_after = message.clean_content.replace("`", "")
+        if message.content:
+            content_after = message.clean_content.replace("`", "")
+        else:
+            content_after = "None"
 
         embed.description = f'**Message\'s Info:**\n' \
                             f'Message Author: {message.author.mention} ({message.author})\n' \
@@ -80,7 +85,6 @@ class AuditLogCog(commands.Cog):
                             f'Message ID: `{message.id}`\n' \
                             f'Attachments: `{len(message.attachments)}`' \
                             f'\n\n**Message Content Before:**\nUnknown' \
-                            f'\n\n**Message Content After:**\n`{content_after} `'
                             f'\n\n**Message Content After:**\n`{content_after}`'
 
         if len(message.attachments) != 0:
@@ -91,7 +95,7 @@ class AuditLogCog(commands.Cog):
 
         file = None
         content = None
-        if len(embed) > 6000 or len(embed.description) > 4096:
+        if len(embed.description) > 4096 or len(embed) > 6000:
             # attach as a file
             embed = None
             content = "**Message Edit!**"
@@ -109,32 +113,11 @@ class AuditLogCog(commands.Cog):
 
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Jump to message", url=message.jump_url))
+
         settingsCog = self.bot.get_cog("SettingsCommand")
-        await settingsCog.getMsgEditChannel(guild).send(content=content, embed=embed, file=file)
+        await settingsCog.getMsgEditChannel(guild).send(content=content, embed=embed, file=file, view=view)
 
     async def handleDelete(self, message: discord.Message):
-        # ATTEMPT 27
-        # after = discord.utils.utcnow() - timedelta(seconds=1)
-        # async for entry in message.guild.audit_logs(limit=1, action=discord.AuditLogAction.message_delete):
-        #     # If a bot/the author deletes the message it won't show up in audit logs
-        #     _self = False
-        #     if entry and message.author == entry.target and entry.extra.channel == message.channel:  # make sure right user and channel
-        #         if entry.created_at >= after:  # message deleted by moderator as audit log created within past second
-        #             deleted_by = f"{entry.user.mention} ({entry.user})"
-        # 
-        #         elif entry.extra.count > 1 and discord.utils.utcnow() - entry.created_at < timedelta(minutes=2):  # deletes can stack up SO limit to only in the previous 2 mins
-        #             # THIS not fail proof but best i can do.
-        #             # Say a mod deletes a members message then a bot deletes a members message within 2 mins. It will say the mod deleted it since bots dont show up in the audit log.
-        #             # The deleted message counter increases but the log creation time stays the same which makes it tricky.
-        #             deleted_by = f"{entry.user.mention} ({entry.user})"
-        #         else:
-        #             deleted_by = "`Self or a Bot`"
-        #             _self = True
-        # 
-        #     else:  # no audit log entry
-        #         deleted_by = "`Self or a Bot`"
-        #         _self = True
-        # 
 
         # MY AUDIT LOG CHECKING METHOD THING
         author = message.author
@@ -186,7 +169,12 @@ class AuditLogCog(commands.Cog):
         embed = discord.Embed()
         embed.set_author(name="Message Deleted", icon_url=message.author.display_avatar.url)
         embed.colour = discord.Colour(0x2F3136)
-        content = message.clean_content.replace("`", "")  # remove so no messed up format
+
+        if message.content:
+            content = message.clean_content.replace("`", "")  # remove so no messed up format
+        else:
+            content = "None"
+
         embedDescription = f'**Message\'s Info:**\n' \
                            f'Message Author: {message.author.mention} ({message.author})\n' \
                            f'Deleted By: {message_deleter}\n' \
@@ -194,7 +182,7 @@ class AuditLogCog(commands.Cog):
                            f'Created: {discord.utils.format_dt(message.created_at, "F")} ({discord.utils.format_dt(message.created_at, "R")})\n' \
                            f'Message ID: `{message.id}`\n' \
                            f'Attachments: `{len(message.attachments)}`' \
-                           f'\n\n**Message Content:**\n`{content} `'
+                           f'\n\n**Message Content:**\n`{content}`'
 
         if len(message.attachments) != 0:
             attachement1 = message.attachments[0]
@@ -206,7 +194,7 @@ class AuditLogCog(commands.Cog):
 
         file = None
         content = None
-        if len(embed) > 6000 or len(embed.description) > 4096:
+        if len(embed.description) > 4096 or len(embed) > 6000:
             # attach as a file
             embed = None
             content = "**Message Delete!**"
@@ -265,6 +253,8 @@ class AuditLogCog(commands.Cog):
                     break
             # otherwise message deleted by self or a bot
 
+        # NO WAY TO GET MEMBER. so idk if bot. so cant return here
+
         embed = discord.Embed()
         embed.set_author(name="Message Deleted")  # , icon_url=message.author.display_avatar.url)
         embed.colour = discord.Colour(0x2F3136)
@@ -320,7 +310,12 @@ class AuditLogCog(commands.Cog):
 
                         embed_cached_content += f"Author: {cached_msg.author.mention} ({cached_msg.author})\n"
                         embed_cached_content += f"Created: {discord.utils.format_dt(cached_msg.created_at)}\n"
-                        embed_cached_content += f"Content: `{cached_msg.clean_content.replace('`', '')} `\n\n"
+
+                        if cached_msg.content:
+                            embed_cached_content += f"Content: `{cached_msg.clean_content.replace('`', '')}`\n\n"
+                        else:
+                            embed_cached_content += f"Content: `None`\n\n"
+
                         break
 
             for msg_id in payload.message_ids:
@@ -331,24 +326,24 @@ class AuditLogCog(commands.Cog):
                     embed_non_cached_content += f"__Message ID {msg_id}__\n"
                     embed_non_cached_content += f"Message not in cache\n\n"
 
-            content = None
-            embed = None
+            embed = discord.Embed(timestamp=discord.utils.utcnow())
+            embed.set_author(name="Bulk Message Delete", icon_url=deleter.display_avatar.url)
+            embed.colour = discord.Colour(0x2F3136)
+
+            embed.description = f'{num_deleted} messages deleted by {deleter.mention} ({deleter}) in {channel.mention}' \
+                                f'\n\n**Messages:**\n\n' \
+                                f'{f"{embed_cached_content}{embed_non_cached_content}"}'
+
             file = None
-            if len(f"{embed_cached_content}{embed_non_cached_content}") > 3500:
-                # send file
+            content = None
+            if len(embed.description) > 4096 or len(embed) > 6000:
+                # attach as a file
+                embed = None
                 content = "**Bulk Message Delete!**"
                 fileContent = f"{num_deleted} messages deleted in #{channel} by {deleter}:\n\n{cached_content}{non_cached_content}"
+
                 buffer = BytesIO(fileContent.encode('utf-8'))
                 file = discord.File(fp=buffer, filename='deleted_messages.txt')
-            else:
-                # send embed
-                embed = discord.Embed(timestamp=discord.utils.utcnow())
-                embed.set_author(name="Bulk Message Delete", icon_url=deleter.display_avatar.url)
-                embed.colour = discord.Colour(0x2F3136)
-
-                embed.description = f'{num_deleted} messages deleted by {deleter.mention} ({deleter}) in {channel.mention}' \
-                                    f'\n\n**Messages:**\n\n' \
-                                    f'{f"{embed_cached_content}{embed_non_cached_content}"}'
 
             settingsCog = self.bot.get_cog("SettingsCommand")
             await settingsCog.getModMsgDeleteChannel(guild).send(content=content, embed=embed, file=file)
