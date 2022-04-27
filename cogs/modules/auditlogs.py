@@ -57,6 +57,9 @@ class AuditLogCog(commands.Cog):
         channel = guild.get_channel(payload.channel_id)
         message: discord.Message = await channel.fetch_message(payload.message_id)
 
+        if message.author.bot:
+            return  # ppl dont care about bot editing its own message
+
         embed = discord.Embed()
         embed.set_author(name="Message Edited", icon_url=message.author.display_avatar.url)
         embed.colour = discord.Colour(0x2F3136)
