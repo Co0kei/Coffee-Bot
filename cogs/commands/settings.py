@@ -309,7 +309,7 @@ class SettingsCommand(commands.Cog):
                 msg_delete_channel = msg_delete_channel.mention
             else:
                 msg_delete_channel = "`None`"
-            embed.add_field(name=':grey_exclamation: **Message Delete**',
+            embed.add_field(name='<:delete:969326302828036096> **Message Delete**',
                             value=f"_Description_: Logs a deleted message when a member deletes their own message or a bot deletes their message.\n"
                                   f"_Value_: {msg_delete_channel}", inline=False)
 
@@ -318,7 +318,7 @@ class SettingsCommand(commands.Cog):
                 mod_msg_delete_channel = mod_msg_delete_channel.mention
             else:
                 mod_msg_delete_channel = "`None`"
-            embed.add_field(name=':grey_exclamation: **Mod Message Delete**',
+            embed.add_field(name='<:delete:969323891883405342> **Mod Message Delete**',
                             value=f"_Description_: Logs a deleted message when a human deletes another members message. Includes bulk message deletes.\n"
                                   f"_Value_: {mod_msg_delete_channel}", inline=False)
 
@@ -327,7 +327,7 @@ class SettingsCommand(commands.Cog):
                 msg_edit_channel = msg_edit_channel.mention
             else:
                 msg_edit_channel = "`None`"
-            embed.add_field(name=':grey_exclamation: **Message Edit**',
+            embed.add_field(name='<:edit:969323916403286046> **Message Edit**',
                             value=f"_Description_: Logs when a member edits their message.\n"
                                   f"_Value_: {msg_edit_channel}", inline=False)
 
@@ -367,9 +367,9 @@ class SettingsCommand(commands.Cog):
             ]
         elif type == SettingPage.Logs:
             return [
-                discord.ui.Button(custom_id="Message Delete", style=discord.ButtonStyle.blurple, row=1),
-                discord.ui.Button(custom_id="Mod Message Delete", style=discord.ButtonStyle.blurple, row=1),
-                discord.ui.Button(custom_id="Message Edit", style=discord.ButtonStyle.blurple, row=1),
+                discord.ui.Button(custom_id="Message Delete", style=discord.ButtonStyle.blurple, emoji="<:delete:969326302828036096>", row=1),
+                discord.ui.Button(custom_id="Mod Message Delete", style=discord.ButtonStyle.blurple, emoji="<:delete:969323891883405342>", row=1),
+                discord.ui.Button(custom_id="Message Edit", style=discord.ButtonStyle.blurple, emoji="<:edit:969323916403286046>", row=1),
             ]
 
         elif type == SettingPage.Misc:
@@ -591,7 +591,7 @@ class SettingsCommand(commands.Cog):
             self.main_view = main_view
 
         channel = ui.TextInput(label='Reports Channel', style=discord.TextStyle.short,
-                               placeholder="Please enter the channel name, such as #reports",
+                               placeholder="Please enter the channel name or id, such as #reports",
                                required=True, max_length=1000)
 
         async def on_error(self, error: Exception, interaction: Interaction) -> None:
@@ -648,7 +648,7 @@ class SettingsCommand(commands.Cog):
             self.main_view = main_view
 
         role = ui.TextInput(label='Alert Role', style=discord.TextStyle.short,
-                            placeholder="Please enter the role name, such as @reports",
+                            placeholder="Please enter the role name or id, such as @reports",
                             required=True, max_length=1000)
 
         async def on_error(self, error: Exception, interaction: Interaction) -> None:
@@ -708,7 +708,7 @@ class SettingsCommand(commands.Cog):
             self.main_view = main_view
 
         role = ui.TextInput(label='Banned Role', style=discord.TextStyle.short,
-                            placeholder="Please enter the role name, such as @muted",
+                            placeholder="Please enter the role name or id, such as @muted",
                             required=True, max_length=1000)
 
         async def on_error(self, error: Exception, interaction: Interaction) -> None:
@@ -952,7 +952,7 @@ class SettingsCommand(commands.Cog):
             self.main_view = main_view
 
         channel = ui.TextInput(label='Mod Log Channel', style=discord.TextStyle.short,
-                               placeholder="Please enter the channel name, such as #logs",
+                               placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
         async def on_error(self, error: Exception, interaction: Interaction) -> None:
@@ -1009,7 +1009,7 @@ class SettingsCommand(commands.Cog):
             self.main_view = main_view
 
         channel = ui.TextInput(label='Message Delete Channel', style=discord.TextStyle.short,
-                               placeholder="Please enter the channel name, such as #logs",
+                               placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
         async def on_error(self, error: Exception, interaction: Interaction) -> None:
@@ -1067,7 +1067,7 @@ class SettingsCommand(commands.Cog):
             self.main_view = main_view
 
         channel = ui.TextInput(label='Mod Message Delete Channel', style=discord.TextStyle.short,
-                               placeholder="Please enter the channel name, such as #logs",
+                               placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
         async def on_error(self, error: Exception, interaction: Interaction) -> None:
@@ -1126,7 +1126,7 @@ class SettingsCommand(commands.Cog):
             self.main_view = main_view
 
         channel = ui.TextInput(label='Message Edit Channel', style=discord.TextStyle.short,
-                               placeholder="Please enter the channel name, such as #logs",
+                               placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
         async def on_error(self, error: Exception, interaction: Interaction) -> None:
