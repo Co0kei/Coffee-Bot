@@ -156,6 +156,13 @@ class VoteCog(commands.Cog):
             await self.message.edit(view=None)
             self.stop()
 
+        async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+                
         @discord.ui.button(label='Yes! Remind me', style=discord.ButtonStyle.green)
         async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
             # add them to a list of user ids

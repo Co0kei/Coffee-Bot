@@ -70,7 +70,7 @@ class AboutCommand(commands.Cog):
         total = sum(self.bot.socket_stats.values())
         cpm = total / minutes
 
-        embed.add_field(name='Process', value=f'{memory_usage:.2f} MB\n{cpu_usage:.2f}% CPU\n{cpm:.2f} EPM')
+        embed.add_field(name='Process', value=f'{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU\n{cpm:.2f} EPM')
 
         embed.add_field(name='Guilds', value=f'{guilds:,}')
         embed.add_field(name='Commands Run', value=f'{self.bot.stat_data["commands_used"]:,}')
@@ -102,6 +102,13 @@ class AboutCommand(commands.Cog):
 
         async def on_timeout(self) -> None:
             await self.message.edit(view=None)
+
+        async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
 
         @discord.ui.button(label='Commit History', emoji="<:github:962089212365111327>", style=discord.ButtonStyle.blurple)
         async def commitHistory(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -135,6 +142,13 @@ class AboutCommand(commands.Cog):
         async def on_timeout(self) -> None:
             await self.message.edit(view=None)
 
+        async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+                
         @discord.ui.button(emoji="<:left:882953998603288586>", style=discord.ButtonStyle.grey)
         async def back(self, interaction: discord.Interaction, button: discord.ui.Button):
             if self.page == 1:
