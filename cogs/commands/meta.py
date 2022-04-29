@@ -2,8 +2,10 @@ import inspect
 import logging
 import os
 
+import bedwarspro
 import discord
 import unicodedata
+from bedwarspro import BedwarsProException
 from discord.ext import commands
 
 from constants import *
@@ -12,10 +14,33 @@ log = logging.getLogger(__name__)
 
 
 class MetaCommands(commands.Cog):
-    """Commands for utilities related to Discord or the Bot itself."""
 
     def __init__(self, bot) -> None:
         self.bot = bot
+
+    async def cog_load(self):
+        self.BW_PRO = bedwarspro.Client(BW_PRO_API_KEY)
+
+    async def cog_unload(self):
+        await self.BW_PRO.close()
+
+    @commands.command()
+    async def bwpro(self, ctx, player=None):
+        if player is None:
+            return await ctx.message.reply("Please enter a player name or UUID!")
+
+        async with self.BW_PRO:
+            try:
+                player = await self.BW_PRO.player(player)
+
+                embed = discord.Embed()
+                embed.title = f'[{player.rank}] {player.name}'
+                embed.colour = discord.Colour.blurple()
+                embed.add_field(name="First Login", value=discord.utils.format_dt(player.first_login))
+                await ctx.message.reply(embed=embed)
+
+            except BedwarsProException as error:
+                await ctx.send(f'Error: {error}.')
 
     @commands.command()
     async def hello(self, ctx):
@@ -28,7 +53,7 @@ class MetaCommands(commands.Cog):
 
         if not characters:
             return await ctx.send("Please enter some chars.")
-        
+
         def to_string(c):
             digit = f'{ord(c):x}'
             name = unicodedata.name(c, 'Name not found.')
