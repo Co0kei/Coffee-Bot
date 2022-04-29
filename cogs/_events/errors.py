@@ -3,7 +3,7 @@ import sys
 import textwrap
 import traceback
 from io import BytesIO
-from typing import Optional, Union
+from typing import Union
 
 import discord
 from discord.app_commands import ContextMenu, Command
@@ -96,9 +96,9 @@ class ErrorCog(commands.Cog):
             else:
                 log.error(original)
 
-    async def on_command_tree_error(self, interaction: discord.Interaction,
-                                    command: Optional[Union[Command, ContextMenu]],
-                                    error: discord.app_commands.AppCommandError):
+    async def on_command_tree_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+
+        command: [Union[Command, ContextMenu]] = interaction.command
 
         if command is None:
             log.error(f'Command Tree Error: {traceback.format_exc()}')
