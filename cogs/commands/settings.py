@@ -25,6 +25,7 @@ class SettingsCommand(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name='settings', description='Configure how I work in your server.')
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.guild_only()
     async def globalSettingsCommand(self, interaction: discord.Interaction):
 
