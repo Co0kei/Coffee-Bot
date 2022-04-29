@@ -78,7 +78,7 @@ class OwnerCog(commands.Cog):
     @commands.command(description="Shows all cogs.")
     async def cogs(self, ctx):
         """ Command to list all cogs and whether they are loaded or not """
-        embed = discord.Embed(colour=discord.Colour.blue())
+        embed = discord.Embed(colour=discord.Colour.blurple())
 
         loaded_extensions = [str(e) for e in self.bot.extensions]
 
@@ -91,8 +91,7 @@ class OwnerCog(commands.Cog):
             else:
                 cogs_data += f"<:offline:821068938036379679> {cog_path}\n"
 
-        embed.add_field(name="**Extensions**", value=f"{cogs_data}", inline=False)
-
+        embed.description = f"**Extensions**\n{cogs_data}"
         embed.add_field(name="**Cogs**", value=f"{str([str(e) for e in self.bot.cogs])}", inline=False)
 
         await ctx.send(embed=embed)
@@ -301,7 +300,7 @@ class OwnerCog(commands.Cog):
                     guild_settings[str(guild_id)][column] = value
 
         self.bot.guild_settings = guild_settings
-        log.info(guild_settings)
+        # log.info(guild_settings)
 
     # @commands.is_owner()
     # @commands.command(description="Shows 1000 most recent votes for the bot")
@@ -355,7 +354,11 @@ class OwnerCog(commands.Cog):
         self.bot.tree.copy_global_to(guild=discord.Object(id=DEV_SERVER_ID))
         result = await self.bot.tree.sync(guild=discord.Object(id=DEV_SERVER_ID))
 
-        await ctx.message.reply("Synced dev server interactions:\n" + str(result))
+        msg = ""
+        for val in result:
+            msg += f"{val.name}\n"
+
+        await ctx.message.reply("Synced dev server interactions:\n" + str(msg))
 
     @commands.is_owner()
     @commands.command(description="Removes guild specific command tree commands from the dev server")
@@ -373,7 +376,12 @@ class OwnerCog(commands.Cog):
     async def syncglobal(self, ctx):
         await ctx.send("Processing global sync")
         result = await self.bot.tree.sync()
-        await ctx.message.reply("Global interaction sync complete:\n" + str(result))
+
+        msg = ""
+        for val in result:
+            msg += f"{val.name}\n"
+
+        await ctx.message.reply("Global interaction sync complete:\n" + str(msg))
 
     @commands.is_owner()
     @commands.command(name="stop", aliases=["close"], description="Gracefully stops the bot")
@@ -439,6 +447,13 @@ class OwnerCog(commands.Cog):
             super().__init__()
             self.value = None
 
+        async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+                
         @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
         async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
             await interaction.response.send_message('Stopping bot...', ephemeral=True)
