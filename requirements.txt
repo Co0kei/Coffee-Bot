@@ -1,4 +1,4 @@
-git+https://github.com/Rapptz/discord.py@723584ca19e34604798043d6fa265785af794ebd
+git+https://github.com/Rapptz/discord.py@ef20264b1c42a6719d13b5a47e62b73652377387
 python-dateutil
 pygit2
 psutil
