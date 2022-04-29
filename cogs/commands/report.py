@@ -25,8 +25,8 @@ class ReportCommand(commands.Cog):
         embed = discord.Embed(title="Configuration Error")
         embed.description = f'This Discord server has not been configured yet.\nPlease ask a server administrator to use the **/settings** command and set a reports channel.' \
                             f'\nCurrently I don\'t know which channel to send reports to!'
-        embed.colour = discord.Colour.red()
-        embed.set_image(url="https://cdn.discordapp.com/attachments/764846716557197323/966418545414135818/unknown.png")
+        embed.colour = discord.Colour.dark_red()
+        embed.set_image(url="https://cdn.discordapp.com/attachments/767356269873987615/968971013255749652/unknown.png")
         return embed
 
     def getReportsBannedEmbed(self, guild: discord.Guild) -> discord.Embed:
@@ -87,6 +87,13 @@ class ReportCommand(commands.Cog):
 
         reason = ui.TextInput(label='Reason', style=discord.TextStyle.paragraph, placeholder="Report reason",
                               required=True, max_length=2000)
+
+        async def on_error(self, error: Exception, interaction: discord.Interaction) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
 
         async def on_submit(self, interaction: discord.Interaction):
             # Send to user
@@ -201,6 +208,13 @@ class ReportCommand(commands.Cog):
 
         reason = ui.TextInput(label='Reason', style=discord.TextStyle.paragraph, placeholder="Report reason",
                               required=True, max_length=2000)
+
+        async def on_error(self, error: Exception, interaction: discord.Interaction) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
 
         async def on_submit(self, interaction: discord.Interaction):
             # sent to user

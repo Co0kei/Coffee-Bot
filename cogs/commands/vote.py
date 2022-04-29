@@ -103,6 +103,13 @@ class VoteCommand(commands.Cog):
         async def on_timeout(self) -> None:
             await self.message.edit(view=None)
 
+        async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+
         async def interaction_check(self, interaction: discord.Interaction) -> bool:
             if interaction.user.id == self.userID:
                 return True
@@ -200,6 +207,13 @@ class VoteCommand(commands.Cog):
         async def on_timeout(self) -> None:
             await self.message.edit(view=None)
 
+        async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+                
         @discord.ui.button(emoji="<:left:882953998603288586>", style=discord.ButtonStyle.grey)
         async def back(self, interaction: discord.Interaction, button: discord.ui.Button):
             if self.page == 1:
