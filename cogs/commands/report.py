@@ -17,6 +17,7 @@ class ReportCommand(commands.Cog):
     @app_commands.command(name='report', description='Report a member with a reason for staff to see.')
     @app_commands.describe(member='The member you are reporting.')
     @app_commands.describe(image='You can upload an image for staff to see if you wish.')
+    @app_commands.guild_only()
     async def globalReportCommand(self, interaction: discord.Interaction, member: discord.User, image: Optional[discord.Attachment] = None):
         await self.handleUserReport(interaction, member, image)
 
