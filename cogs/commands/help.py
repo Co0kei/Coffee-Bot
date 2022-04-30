@@ -16,8 +16,7 @@ class HelpCommand(commands.Cog):
         await self.handleHelpCommand(interaction)
 
     async def handleHelpCommand(self, interaction: discord.Interaction):
-        embed = discord.Embed()
-        embed.colour = discord.Colour.blurple()
+        embed = discord.Embed(colour=discord.Colour.blurple())
         embed.set_author(name=f'Welcome to {self.bot.user.name}', icon_url=self.bot.user.display_avatar.url)
         embed.description = f"{self.bot.user.name} is an open source bot specialising in reports!\n\n" \
                             "For a detailed list of commands, features and examples, visit my [Top.gg](https://top.gg/bot/950765718209720360) page!"
@@ -30,12 +29,52 @@ class HelpCommand(commands.Cog):
         f'**/about** - Some stats about the bot.\n'
         f'**/vote** - Shows your voting history.', inline=False)
 
-        view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="Top.gg", emoji="<:topgg:963166927843364874>", url="https://top.gg/bot/950765718209720360"))
-        view.add_item(discord.ui.Button(label="GitHub", emoji="<:github:962089212365111327>", url="https://github.com/Co0kei/Coffee-Bot"))
-        view.add_item(discord.ui.Button(label="Invite", emoji="📩", url=discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))))
+        view = self.MiscCommandsButton(cog=self)
+        await interaction.response.send_message(embed=embed, view=view)
+        view.message = await interaction.original_message()
 
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
+    class MiscCommandsButton(discord.ui.View):
+
+        def __init__(self, timeout=120, cog=None):
+            super().__init__(timeout=timeout)
+            self.message = None
+            self.cog = cog
+
+            self.add_item(discord.ui.Button(label="Top.gg", emoji="<:topgg:963166927843364874>", url="https://top.gg/bot/950765718209720360"))
+            self.add_item(discord.ui.Button(label="GitHub", emoji="<:github:962089212365111327>", url="https://github.com/Co0kei/Coffee-Bot"))
+            self.add_item(discord.ui.Button(label="Invite", emoji="📩", url=discord.utils.oauth_url(cog.bot.user.id, permissions=discord.Permissions(8))))
+
+            self.remove_item(self.miscCommands)  # reorder
+            self.add_item(self.miscCommands)
+
+        async def on_timeout(self) -> None:
+            await self.message.edit(view=None)
+
+        async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+
+        @discord.ui.button(label='Misc Commands', emoji="\U00002755", style=discord.ButtonStyle.blurple)
+        async def miscCommands(self, interaction: discord.Interaction, button: discord.ui.Button):
+            prefix_commands = ""
+            prefix = self.cog.bot.get_cog('SettingsCommand').getPrefix(interaction.guild)
+            for command in self.cog.bot.get_cog('MetaCommands').walk_commands():
+                cmd = f'**{prefix}{command.name}'
+                if command.usage:
+                    cmd += f' {command.usage}'
+                cmd += "**"
+                if command.aliases:
+                    cmd += f" - ({', '.join(command.aliases)})"
+                cmd += f" - {command.description}\n"
+                prefix_commands += cmd
+
+            embed = discord.Embed(colour=discord.Colour.blurple())
+            embed.description = f"**__Misc Commands__**\n{prefix_commands}"
+            embed.set_footer(text="You can configure the prefix in the /settings command")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot):
