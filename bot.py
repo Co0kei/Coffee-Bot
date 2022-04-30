@@ -62,19 +62,6 @@ bot = CoffeeBot(command_prefix=get_prefix, owner_id=452187819738267687,
 bot.default_prefix = prefix
 
 
-# Setup Context Menus
-@bot.tree.context_menu(name='Report Message')
-@app_commands.guild_only()
-async def globalReportMessage(interaction: discord.Interaction, message: discord.Message):
-    await bot.get_cog("ReportCommand").handleMessageReport(interaction, message)
-
-
-@bot.tree.context_menu(name='Report User')
-@app_commands.guild_only()
-async def globalReportUser(interaction: discord.Interaction, member: discord.Member):
-    await bot.get_cog("ReportCommand").handleUserReport(interaction, member, None)
-
-
 # Events
 @bot.event
 async def on_ready():

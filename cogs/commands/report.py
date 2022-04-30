@@ -14,12 +14,31 @@ class ReportCommand(commands.Cog):
         self.bot = bot
         self.on_cooldown = {}
 
+        self.messageContextMenu = app_commands.ContextMenu(name='Report Message', callback=self.globalReportMessage)
+        self.bot.tree.add_command(self.messageContextMenu)
+
+        self.userContextMenu = app_commands.ContextMenu(name='Report User', callback=self.globalReportUser)
+        self.bot.tree.add_command(self.userContextMenu)
+
+    async def cog_unload(self) -> None:
+        self.bot.tree.remove_command(self.messageContextMenu.name, type=self.messageContextMenu.type)
+        self.bot.tree.remove_command(self.userContextMenu.name, type=self.userContextMenu.type)
+
+    # Setup Slash Command & Context Menus
     @app_commands.command(name='report', description='Report a member with a reason for staff to see.')
-    @app_commands.describe(member='The member you are reporting.')
-    @app_commands.describe(image='You can upload an image for staff to see if you wish.')
+    @app_commands.describe(member='The member you are reporting.',
+                           image='You can upload an image for staff to see if you wish.')
     @app_commands.guild_only()
     async def globalReportCommand(self, interaction: discord.Interaction, member: discord.User, image: Optional[discord.Attachment] = None):
         await self.handleUserReport(interaction, member, image)
+
+    @app_commands.guild_only()
+    async def globalReportMessage(self, interaction: discord.Interaction, message: discord.Message):
+        await self.handleMessageReport(interaction, message)
+
+    @app_commands.guild_only()
+    async def globalReportUser(self, interaction: discord.Interaction, member: discord.Member):
+        await self.handleUserReport(interaction, member, None)
 
     # Methods
     def getNoReportsChannelEmbed(self) -> discord.Embed:
