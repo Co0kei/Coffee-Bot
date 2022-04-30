@@ -5,7 +5,6 @@ from pathlib import Path
 
 import aiohttp
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 from constants import *
@@ -34,31 +33,15 @@ def get_prefix(bot, msg):
     return commands.when_mentioned_or(prefix)(bot, msg)
 
 
-# Custom Context
-class MyContext(commands.Context):
-    async def tick(self, value):
-        emoji = '\N{WHITE HEAVY CHECK MARK}' if value else '\N{CROSS MARK}'
-        try:
-            await self.message.add_reaction(emoji)
-        except discord.HTTPException:
-            pass
-
-
 # Define bot
-class CoffeeBot(commands.Bot):
-    async def get_context(self, message, *, cls=MyContext):
-        return await super().get_context(message, cls=cls)
-
-
 intents = discord.Intents.all()
 intents.typing = False
 intents.presences = False
-bot = CoffeeBot(command_prefix=get_prefix, owner_id=452187819738267687,
-                case_insensitive=True, strip_after_prefix=True, max_messages=10000,
-                allowed_mentions=discord.AllowedMentions(roles=False, everyone=False, replied_user=False, users=True),
-                intents=intents, help_command=None, chunk_guilds_at_startup=True,
-                shard_count=1, shard_id=0)
-
+bot = commands.Bot(command_prefix=get_prefix, owner_id=452187819738267687,
+                   case_insensitive=True, strip_after_prefix=True, max_messages=10000,
+                   allowed_mentions=discord.AllowedMentions(roles=False, everyone=False, replied_user=False, users=True),
+                   intents=intents, help_command=None,  # chunk_guilds_at_startup=True,
+                   shard_count=1, shard_id=0)
 bot.default_prefix = prefix
 
 
