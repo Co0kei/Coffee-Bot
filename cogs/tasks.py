@@ -30,6 +30,7 @@ class TaskCog(commands.Cog):
         time_now = discord.utils.utcnow()
         if time_now.day == 1 and time_now.hour == 0 and time_now.minute == 0:
             # it is midnight on first day of month so reset monthly votes!
+            self.bot.stat_data["last_months_votes"] = self.bot.stat_data["monthly_votes"]
             self.bot.stat_data["monthly_votes"] = 0
             log.info("Reset monthly top.gg votes.")
 
