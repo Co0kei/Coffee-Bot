@@ -1,14 +1,17 @@
 import asyncio
+import datetime
 import gc
 import io
 import json
 import logging
 import os
+import re
 import shutil
 import sys
 import textwrap
 import time
 import traceback
+import typing
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -69,13 +72,19 @@ class OwnerCog(commands.Cog):
     async def owner(self, ctx):
         owner_commands = ""
         for command in self.get_commands():
-            owner_commands += f'**{ctx.prefix}{command.name}** - {command.aliases} - {command.description}\n'
+            cmd = f'**{ctx.prefix}{command.name}'
+            if command.usage:
+                cmd += f' {command.usage}'
+            cmd += "**"
+            if command.aliases:
+                cmd += f" - {command.aliases}"
+            cmd += f" - {command.description}\n"
+            owner_commands += cmd
 
-        embed = discord.Embed(title="Owner Commands", description=owner_commands, colour=discord.Colour(0x2F3136))
-
+        embed = discord.Embed(title="Owner Commands", description=owner_commands, colour=discord.Colour.blurple())
         await ctx.message.reply(embed=embed)
 
-    @commands.command(description="Shows all cogs.")
+    @commands.command(description="Shows all cogs")
     async def cogs(self, ctx):
         """ Command to list all cogs and whether they are loaded or not """
         embed = discord.Embed(colour=discord.Colour.blurple())
@@ -225,7 +234,7 @@ class OwnerCog(commands.Cog):
         await ctx.send(msg)
 
     @commands.is_owner()
-    @commands.command(description="Saves data to disk")
+    @commands.command(description="Saves stat and vote data to disk")
     async def dump(self, ctx):
         """ Save data to disk """
 
@@ -335,7 +344,7 @@ class OwnerCog(commands.Cog):
                 await ctx.reply("Done")
 
     @commands.is_owner()
-    @commands.command(description="Simulate a player voting. Used for testing purposes")
+    @commands.command(description="Simulate a player voting. Used for testing purposes", usage="[user_id] [is_weekend]")
     async def simvote(self, ctx, id=None, is_weekend=False):  # add optional weekend param
         id = id or ctx.author.id
 
@@ -372,7 +381,7 @@ class OwnerCog(commands.Cog):
         await ctx.message.reply("Dev server local interactions removed:\n" + str(result))
 
     @commands.is_owner()
-    @commands.command(description="Syncs the global command tree. This takes one hour to propogate")
+    @commands.command(description="Syncs the global command tree; This takes one hour to propogate")
     async def syncglobal(self, ctx):
         await ctx.send("Processing global sync")
         result = await self.bot.tree.sync()
@@ -387,10 +396,10 @@ class OwnerCog(commands.Cog):
     @commands.command(name="stop", aliases=["close"], description="Gracefully stops the bot")
     async def _stop(self, ctx):
 
-        # check for vote alerts within the next 2 hours
         msg = ""
         current_time: int = int(time.time())
         if "vote_reminder" in self.bot.vote_data:
+            # check for vote alerts within the next 2 hours
             vote_reminders: list = self.bot.vote_data["vote_reminder"]
             if len(vote_reminders) != 0:
                 for discordID in vote_reminders:
@@ -400,74 +409,21 @@ class OwnerCog(commands.Cog):
                         # alert me if anyone is expecting an alert in next 2 hours
                         msg += f'`+` Discord ID {discordID} is expecting a vote reminder <t:{self.bot.vote_data[str(discordID)]["last_vote"] + 43200}:R>\n'
 
-        if msg != "":
-            # ask if wants to continue
-            embed = discord.Embed(title="Vote reminders in the next 2 hours", description=msg[:4000],
-                                  color=discord.Colour.dark_theme())
-            view = self.Confirm()
+        if msg == "":
+            msg = "None"
 
-            sent_msg = await ctx.send(content='Do you want to continue?', embed=embed, view=view)
-
-            await view.wait()  # Wait for the View to stop listening for input...
-
-            await sent_msg.edit(view=None)
-
-            if view.value is None:
-                return  # timed out
-            elif view.value:
-                pass  # confirm
-            else:
-                return  # cancelled
-
-        await self.bot.change_presence(status=discord.Status.dnd, activity=discord.Game("Shutting down..."))
-        await asyncio.sleep(1)
+        embed = discord.Embed(title="Vote reminders in the next 2 hours", description=msg[:4000], color=discord.Colour.dark_theme())
+        value = await ctx.prompt('Do you want to continue?', embed=embed)
+        if not value:  # stop if None or False returned.
+            return
 
         cmd = self.bot.get_command("dump")
         await cmd(ctx)
 
-        # unload all cogs
-        msg = ""
-        for file in Path('cogs').glob('**/*.py'):
-            *tree, _ = file.parts
-            try:
-                await self.bot.unload_extension(f"{'.'.join(tree)}.{file.stem}")
-                msg += f"\U00002705 Successfully unloaded {file}!\n"
-
-            except Exception as e:
-                log.warning(f'Failed to unload extension {file}.')
-                msg += f"\U0000274c Failed to unload {file} with reason: {e}\n"
-                traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-
-        await ctx.send(msg)
-
         await self.bot.close()
 
-    class Confirm(discord.ui.View):
-        def __init__(self):
-            super().__init__()
-            self.value = None
-
-        async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
-            log.exception(error)
-            if interaction.response.is_done():
-                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
-            else:
-                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
-                
-        @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
-        async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-            await interaction.response.send_message('Stopping bot...', ephemeral=True)
-            self.value = True
-            self.stop()
-
-        @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey)
-        async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-            await interaction.response.send_message('Cancelling', ephemeral=True)
-            self.value = False
-            self.stop()
-
     @commands.is_owner()
-    @commands.command(aliases=["clonerepo"], description="Pulls commits or files from GitHub. Include true for files.")
+    @commands.command(aliases=["clonerepo"], description="Pulls commits and optionally files from GitHub. Include true for files.", usage="[pull_files]")
     async def pullgit(self, ctx, py=False):
         """Clone commit history. Optionally pull files from git. """
         if sys.platform == DEV_PLATFORM:
@@ -509,7 +465,7 @@ class OwnerCog(commands.Cog):
         return content.strip('` \n')
 
     @commands.is_owner()
-    @commands.command(name="eval", description="Evaluates code")
+    @commands.command(name="eval", description="Evaluates code", usage="<code>")
     async def _eval(self, ctx, *, body: str = None):
         """Evaluates code"""
 
@@ -653,7 +609,7 @@ class OwnerCog(commands.Cog):
         await ctx.send(f'{total} socket events observed ({cpm:.2f}/minute):\n{self.bot.socket_stats}')
 
     @commands.is_owner()
-    @commands.command(aliases=['cancel_task'], description="Debug a task by a memory location")
+    @commands.command(aliases=['cancel_task'], description="Debug a task by a memory location", usage="<memory_id>")
     async def debug_task(self, ctx, memory_id: str = None):
         """Debug a task by a memory location."""
         if not memory_id:
@@ -691,7 +647,7 @@ class OwnerCog(commands.Cog):
             await ctx.send(page)
 
     @commands.is_owner()
-    @commands.command(aliases=['debugperms'], description="Shows permission resolution for a guild and an optional author.")
+    @commands.command(aliases=['debugperms'], description="Shows permission resolution for a guild and an optional author", usage="[guild_id] [author_id]")
     async def debugpermissions(self, ctx, guild_id=None, author_id=None):
         """Shows permission resolution for a guild and an optional author."""
         if not guild_id and not author_id:
@@ -726,6 +682,336 @@ class OwnerCog(commands.Cog):
             e.add_field(name='Denied', value='\n'.join(denied))
         await ctx.send(embed=e)
 
+    # command stats
+    def censor_object(self, obj):
+        self.bot.blacklist = []
+
+        if not isinstance(obj, str) and obj.id in self.bot.blacklist:
+            return '[censored]'
+        return self.censor_invite(obj)
+
+    _INVITE_REGEX = re.compile(r'(?:https?:\/\/)?discord(?:\.gg|\.com|app\.com\/invite)?\/[A-Za-z0-9]+')
+
+    def censor_invite(self, obj, *, _regex=_INVITE_REGEX):
+        return _regex.sub('[censored-invite]', str(obj))
+
+    @commands.command(description="Global all time command statistics.")
+    async def globalstats(self, ctx):
+        query = "SELECT COUNT(*) FROM commands;"
+        total = await self.bot.pool.fetchrow(query)
+
+        e = discord.Embed(title='Command Stats', colour=discord.Colour.blurple())
+        e.description = f'{total[0]} commands used globally.'
+
+        lookup = (
+            '\N{FIRST PLACE MEDAL}',
+            '\N{SECOND PLACE MEDAL}',
+            '\N{THIRD PLACE MEDAL}',
+            '\N{SPORTS MEDAL}',
+            '\N{SPORTS MEDAL}'
+        )
+
+        query = """SELECT command, COUNT(*) AS "uses"
+                   FROM commands
+                   GROUP BY command
+                   ORDER BY "uses" DESC
+                   LIMIT 5;
+                """
+
+        records = await self.bot.pool.fetch(query)
+        value = '\n'.join(f'{lookup[index]}: {command} ({uses} uses)' for (index, (command, uses)) in enumerate(records))
+        e.add_field(name='Top Commands', value=value, inline=False)
+
+        query = """SELECT guild_id, COUNT(*) AS "uses"
+                   FROM commands
+                   GROUP BY guild_id
+                   ORDER BY "uses" DESC
+                   LIMIT 5;
+                """
+
+        records = await self.bot.pool.fetch(query)
+        value = []
+        for (index, (guild_id, uses)) in enumerate(records):
+            if guild_id is None:
+                guild = 'Private Message'
+            else:
+                guild = self.censor_object(self.bot.get_guild(guild_id) or f'<Unknown {guild_id}>')
+
+            emoji = lookup[index]
+            value.append(f'{emoji}: {guild} ({uses} uses)')
+
+        e.add_field(name='Top Guilds', value='\n'.join(value), inline=False)
+
+        query = """SELECT author_id, COUNT(*) AS "uses"
+                   FROM commands
+                   GROUP BY author_id
+                   ORDER BY "uses" DESC
+                   LIMIT 5;
+                """
+
+        records = await self.bot.pool.fetch(query)
+        value = []
+        for (index, (author_id, uses)) in enumerate(records):
+            user = self.censor_object(self.bot.get_user(author_id) or f'<Unknown {author_id}>')
+            emoji = lookup[index]
+            value.append(f'{emoji}: {user} ({uses} uses)')
+
+        e.add_field(name='Top Users', value='\n'.join(value), inline=False)
+        await ctx.send(embed=e)
+
+    @commands.command(description="Global command statistics for the day")
+    async def todaystats(self, ctx):
+        query = "SELECT type, COUNT(*) FROM commands WHERE used > (CURRENT_TIMESTAMP - INTERVAL '1 day') GROUP BY type;"
+        total = await self.bot.pool.fetch(query)
+        slash = 0
+        context = 0
+        message = 0
+        for type, count in total:
+            if type == 1:
+                slash += count
+            elif type == 2 or type == 3:
+                context += count
+            else:
+                message += count
+
+        e = discord.Embed(title='Last 24 Hour Command Stats', colour=discord.Colour.blurple())
+        e.description = f'{slash + context + message} commands used today. ' \
+                        f'({slash} slash, {context} context menus, {message} prefix commands)'
+
+        lookup = (
+            '\N{FIRST PLACE MEDAL}',
+            '\N{SECOND PLACE MEDAL}',
+            '\N{THIRD PLACE MEDAL}',
+            '\N{SPORTS MEDAL}',
+            '\N{SPORTS MEDAL}'
+        )
+
+        query = """SELECT command, COUNT(*) AS "uses"
+                   FROM commands
+                   WHERE used > (CURRENT_TIMESTAMP - INTERVAL '1 day')
+                   GROUP BY command
+                   ORDER BY "uses" DESC
+                   LIMIT 5;
+                """
+
+        records = await self.bot.pool.fetch(query)
+        value = '\n'.join(f'{lookup[index]}: {command} ({uses} uses)' for (index, (command, uses)) in enumerate(records))
+        e.add_field(name='Top Commands', value=value, inline=False)
+
+        query = """SELECT guild_id, COUNT(*) AS "uses"
+                   FROM commands
+                   WHERE used > (CURRENT_TIMESTAMP - INTERVAL '1 day')
+                   GROUP BY guild_id
+                   ORDER BY "uses" DESC
+                   LIMIT 5;
+                """
+
+        records = await self.bot.pool.fetch(query)
+        value = []
+        for (index, (guild_id, uses)) in enumerate(records):
+            if guild_id is None:
+                guild = 'Private Message'
+            else:
+                guild = self.censor_object(self.bot.get_guild(guild_id) or f'<Unknown {guild_id}>')
+            emoji = lookup[index]
+            value.append(f'{emoji}: {guild} ({uses} uses)')
+
+        e.add_field(name='Top Guilds', value='\n'.join(value), inline=False)
+
+        query = """SELECT author_id, COUNT(*) AS "uses"
+                   FROM commands
+                   WHERE used > (CURRENT_TIMESTAMP - INTERVAL '1 day')
+                   GROUP BY author_id
+                   ORDER BY "uses" DESC
+                   LIMIT 5;
+                """
+
+        records = await self.bot.pool.fetch(query)
+        value = []
+        for (index, (author_id, uses)) in enumerate(records):
+            user = self.censor_object(self.bot.get_user(author_id) or f'<Unknown {author_id}>')
+            emoji = lookup[index]
+            value.append(f'{emoji}: {user} ({uses} uses)')
+
+        e.add_field(name='Top Users', value='\n'.join(value), inline=False)
+        await ctx.send(embed=e)
+
+    class TabularData:
+        def __init__(self):
+            self._widths = []
+            self._columns = []
+            self._rows = []
+
+        def set_columns(self, columns):
+            self._columns = columns
+            self._widths = [len(c) + 2 for c in columns]
+
+        def add_row(self, row):
+            rows = [str(r) for r in row]
+            self._rows.append(rows)
+            for index, element in enumerate(rows):
+                width = len(element) + 2
+                if width > self._widths[index]:
+                    self._widths[index] = width
+
+        def add_rows(self, rows):
+            for row in rows:
+                self.add_row(row)
+
+        def render(self):
+            """Renders a table in rST format.
+            Example:
+            +-------+-----+
+            | Name  | Age |
+            +-------+-----+
+            | Alice | 24  |
+            |  Bob  | 19  |
+            +-------+-----+
+            """
+
+            sep = '+'.join('-' * w for w in self._widths)
+            sep = f'+{sep}+'
+
+            to_draw = [sep]
+
+            def get_entry(d):
+                elem = '|'.join(f'{e:^{self._widths[i]}}' for i, e in enumerate(d))
+                return f'|{elem}|'
+
+            to_draw.append(get_entry(self._columns))
+            to_draw.append(sep)
+
+            for row in self._rows:
+                to_draw.append(get_entry(row))
+
+            to_draw.append(sep)
+            return '\n'.join(to_draw)
+
+    async def tabulate_query(self, ctx, query, *args):
+        records = await self.bot.pool.fetch(query, *args)
+
+        if len(records) == 0:
+            return await ctx.send('No results found.')
+
+        headers = list(records[0].keys())
+
+        table = self.TabularData()
+        table.set_columns(headers)
+        table.add_rows(list(r.values()) for r in records)
+        render = table.render()
+
+        fmt = f'```\n{render}\n```'
+        if len(fmt) > 2000:
+            fp = io.BytesIO(fmt.encode('utf-8'))
+            await ctx.send('Too many results...', file=discord.File(fp, 'results.txt'))
+        else:
+            await ctx.send(fmt)
+
+    @commands.command(aliases=['cmdh'], description="Global Command history")
+    @commands.is_owner()
+    async def commandhistory(self, ctx):
+        query = """SELECT
+                        command,
+                        to_char(used, 'Mon DD HH12:MI:SS AM') AS "invoked",
+                        author_id,
+                        guild_id
+                   FROM commands
+                   ORDER BY used DESC
+                   LIMIT 15;
+                """
+        await self.tabulate_query(ctx, query)
+
+    @commands.command(aliases=['cmdhf'], description="Command history for a command", usage="[days=7] <command>")
+    @commands.is_owner()
+    async def commandhistoryfor(self, ctx, days: typing.Optional[int] = 7, *, command: str):
+        query = """SELECT *
+                   FROM (
+                       SELECT guild_id,
+                              SUM(1) AS "total"
+                       FROM commands
+                       WHERE command=$1
+                       AND used > (CURRENT_TIMESTAMP - $2::interval)
+                       GROUP BY guild_id
+                   ) AS t
+                   ORDER BY "total" DESC
+                   LIMIT 30;
+                """
+
+        await self.tabulate_query(ctx, query, command, datetime.timedelta(days=days))
+
+    @commands.command(aliases=['cmdhg'], description="Command history for a guild", usage="<guild_id>")
+    @commands.is_owner()
+    async def commandhistoryguild(self, ctx, guild_id: int):
+        query = """SELECT
+                        command,
+                        channel_id,
+                        author_id,
+                        used
+                   FROM commands
+                   WHERE guild_id=$1
+                   ORDER BY used DESC
+                   LIMIT 15;
+                """
+        await self.tabulate_query(ctx, query, guild_id)
+
+    @commands.command(aliases=['cmdhu'], description="Command history for a user", usage="<user_id>")
+    @commands.is_owner()
+    async def commandhistoryuser(self, ctx, user_id: int):
+        query = """SELECT
+                        command,
+                        guild_id,
+                        used
+                   FROM commands
+                   WHERE author_id=$1
+                   ORDER BY used DESC
+                   LIMIT 20;
+                """
+        await self.tabulate_query(ctx, query, user_id)
+
+    @commands.command(aliases=['cmdlog'], description="Command history log for the last N days", usage="[days=7]")
+    @commands.is_owner()
+    async def commandlog(self, ctx, days=7):
+        query = """SELECT command, COUNT(*)
+                   FROM commands
+                   WHERE used > (CURRENT_TIMESTAMP - $1::interval)
+                   GROUP BY command
+                   ORDER BY 2 DESC
+                """
+
+        all_commands = {
+            # add meta commands
+            c.qualified_name: 0 for c in self.bot.get_cog('MetaCommands').walk_commands()
+        }
+        # add application commands
+        for command in self.bot.tree.get_commands():
+            all_commands[command.name] = 0
+
+        records = await self.bot.pool.fetch(query, datetime.timedelta(days=days))
+        for name, uses in records:
+            if name in all_commands:
+                all_commands[name] = uses
+
+        as_data = sorted(all_commands.items(), key=lambda t: t[1], reverse=True)
+        table = self.TabularData()
+        table.set_columns(['Command', 'Uses'])
+        table.add_rows(tup for tup in as_data)
+        render = table.render()
+
+        embed = discord.Embed(title='Summary', colour=discord.Colour.green())
+        embed.set_footer(text='Since').timestamp = discord.utils.utcnow() - datetime.timedelta(days=days)
+
+        top_ten = '\n'.join(f'{command}: {uses}' for command, uses in records[:10])
+        bottom_ten = '\n'.join(f'{command}: {uses}' for command, uses in records[-10:])
+        embed.add_field(name='Top 10', value=top_ten)
+        embed.add_field(name='Bottom 10', value=bottom_ten)
+
+        unused = ', '.join(name for name, uses in as_data if uses == 0)
+        if len(unused) > 1024:
+            unused = 'Way too many...'
+
+        embed.add_field(name='Unused', value=unused, inline=False)
+
+        await ctx.send(embed=embed, file=discord.File(io.BytesIO(render.encode()), filename='full_results.txt'))
 
 async def setup(bot):
     if not hasattr(bot, 'uptime'):
