@@ -58,9 +58,11 @@ class ErrorCog(commands.Cog):
         if isinstance(error, commands.NoPrivateMessage):
             await ctx.author.send('This command cannot be used in private messages.')
         elif isinstance(error, commands.NotOwner):
-            await ctx.send('Sorry. This command can\'t be used by you.')
+            await ctx.reply('Sorry. This command can\'t be used by you.')
         elif isinstance(error, commands.CommandOnCooldown):
-            await ctx.send(f"This command is on cooldown. Try again in {error.retry_after:,.2f} secs.")
+            await ctx.reply(f"This command is on cooldown. Try again in {error.retry_after:,.2f} secs.")
+        elif isinstance(error, (commands.BadArgument, commands.MissingRequiredArgument, commands.MemberNotFound)):
+            await ctx.reply(error)
 
         elif isinstance(error, commands.CommandInvokeError):
             original = error.original
