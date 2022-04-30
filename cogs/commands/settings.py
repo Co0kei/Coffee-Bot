@@ -32,8 +32,7 @@ class SettingsCommand(commands.Cog):
         if interaction.guild is None:
             return await interaction.response.send_message("Please use this command in a Discord server.")
 
-        member = interaction.guild.get_member(interaction.user.id)
-        if not member.guild_permissions.manage_guild:
+        if not interaction.user.guild_permissions.manage_guild:
             return await interaction.response.send_message("You must have the `Manage Server` permission to use this.", ephemeral=True)
 
         guild = interaction.guild
@@ -339,7 +338,7 @@ class SettingsCommand(commands.Cog):
             embed = discord.Embed(title="Settings", description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
             embed.set_author(name="Miscellaneous", icon_url="https://cdn.discordapp.com/attachments/878620836284747788/966669697149992990/Discord_settings.png")
             embed.add_field(name=':grey_exclamation: **Prefix**',
-                            value=f"_Description_: Set the prefix for any non slash commands to respond to.\n"
+                            value=f"_Description_: Set the prefix for any non slash commands to respond to. See /help\n"
                                   f"_Value_: `{self.getPrefix(guild)}`", inline=False)
             return embed
 
