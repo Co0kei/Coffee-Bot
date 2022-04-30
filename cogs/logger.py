@@ -14,13 +14,13 @@ class LoggerCog(commands.Cog):
             msges = ['PyNaCl is not installed, voice will NOT be supported',
 
                      # 'logging in using static token',
-                     'Shard ID None has sent the IDENTIFY payload.',
-                     'Shard ID None has connected to Gateway',
+                     'Shard ID 0 has sent the IDENTIFY payload.',
+                     'Shard ID 0 has connected to Gateway',
 
                      'Websocket closed with WSCloseCode.ABNORMAL_CLOSURE, attempting a reconnect.',
                      'Got a request to RESUME the websocket.',
-                     'Shard ID None has sent the RESUME payload.',
-                     'Shard ID None has successfully RESUMED session '
+                     'Shard ID 0 has sent the RESUME payload.',
+                     'Shard ID 0 has successfully RESUMED session '
                      ]
             if any(record.getMessage().startswith(msg) for msg in msges):
                 return False
