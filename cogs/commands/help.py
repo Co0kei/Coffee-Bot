@@ -59,8 +59,13 @@ class HelpCommand(commands.Cog):
 
         @discord.ui.button(label='Misc Commands', emoji="\U00002755", style=discord.ButtonStyle.blurple)
         async def miscCommands(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+            if interaction.guild:
+                prefix = self.cog.bot.get_cog('SettingsCommand').getPrefix(interaction.guild)
+            else:
+                prefix = self.cog.bot.default_prefix
+
             prefix_commands = ""
-            prefix = self.cog.bot.get_cog('SettingsCommand').getPrefix(interaction.guild)
             for command in self.cog.bot.get_cog('MetaCommands').walk_commands():
                 cmd = f'**{prefix}{command.name}'
                 if command.usage:
