@@ -109,7 +109,10 @@ class CommandCog(commands.Cog):
         embed.timestamp = discord.utils.utcnow()
         embed.set_footer(text=f'Total commands ran: {self.bot.stat_data["commands_used"]:,}')
 
-        # DONT SAVE MESSAGE BASED COMMANDS <---------------
+        # Send to stats thingy - only save message based commands from the meta cog
+        if ctx.command.qualified_name in [c.qualified_name for c in self.bot.get_cog('MetaCommands').walk_commands()]:
+            await self.bot.get_cog('StatsCog').register_command(ctx.command.qualified_name, guild_id, ctx.channel.id, ctx.author.id, ctx.message.created_at.isoformat(),
+                                                                ctx.prefix, 0)
 
         if (ctx.guild is not None and ctx.guild.id == DEV_SERVER_ID) or ctx.author.id == self.bot.owner_id:
             return
