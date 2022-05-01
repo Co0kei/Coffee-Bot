@@ -48,7 +48,8 @@ class HelpCommand(commands.Cog):
             self.add_item(self.miscCommands)
 
         async def on_timeout(self) -> None:
-            await self.message.edit(view=None)
+            self.remove_item(self.miscCommands)
+            await self.message.edit(view=self)
 
         async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
             log.exception(error)
