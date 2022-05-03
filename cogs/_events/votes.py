@@ -97,7 +97,7 @@ class VoteCog(commands.Cog):
                 await conn.execute(query1, int(discord_ID), coins_received, current_time, is_weekend)
                 await conn.execute(query2, int(discord_ID), total_coins, vote_streak, last_vote)
 
-        user = self.bot.get_user(int(discord_ID)) or await self.bot.fetch_user(int(discord_ID))
+        user = await self.bot.get_or_fetch_user(int(discord_ID))
 
         if first_vote:
             msg = f"Thank you very much for taking the time to vote for me! :hugging: You have received **{coins_received:,}**:coin:!"
@@ -138,7 +138,7 @@ class VoteCog(commands.Cog):
 
     class ReminderButtons(discord.ui.View):
 
-        def __init__(self, timeout=300, bot=None, last_vote=None, msg=None):
+        def __init__(self, timeout=300 * 6, bot=None, last_vote=None, msg=None):
             super().__init__(timeout=timeout)
             self.message = None  # the original interaction message
             self.bot = bot  # the main bot instance
@@ -158,7 +158,6 @@ class VoteCog(commands.Cog):
         @discord.ui.button(label='Yes, remind me!', style=discord.ButtonStyle.green)
         async def voteReminders(self, interaction: discord.Interaction, button: discord.ui.Button):
             self.bot.stat_data["vote_reminders"][str(interaction.user.id)] = self.last_vote
-            log.info(self.bot.stat_data["vote_reminders"])
 
             content = f"{self.msg}\n\nThanks! I will send you a message in 12 hours! :star_struck:"
             await interaction.response.edit_message(content=content, view=None)

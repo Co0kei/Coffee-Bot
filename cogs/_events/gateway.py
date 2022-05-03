@@ -14,6 +14,9 @@ class GatewayCog(commands.Cog):
     async def on_socket_event_type(self, event_type):
         self.bot.socket_stats[event_type] += 1
 
+        if event_type == "GUILD_MEMBERS_CHUNK":
+            log.info(f"Handling GUILD_MEMBERS_CHUNK")
+            
 
 async def setup(bot):
     if not hasattr(bot, 'socket_stats'):

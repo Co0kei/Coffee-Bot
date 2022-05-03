@@ -10,8 +10,6 @@ import pygit2
 from discord import app_commands
 from discord.ext import commands
 
-from constants import DEV_SERVER_ID
-
 log = logging.getLogger(__name__)
 
 
@@ -31,9 +29,7 @@ class AboutCommand(commands.Cog):
         embed.url = 'https://github.com/Co0kei/Coffee-Bot'
         embed.colour = discord.Colour.blurple()
 
-        # To properly cache myself, I need to use the bot dev server.
-        dev_guild = self.bot.get_guild(DEV_SERVER_ID)
-        owner = dev_guild.get_member(self.bot.owner_id)
+        owner = await self.bot.get_or_fetch_user(int(self.bot.owner_id))
         embed.set_author(name="Created by " + str(owner), icon_url=owner.display_avatar.url)
 
         # statistics
@@ -48,7 +44,10 @@ class AboutCommand(commands.Cog):
             if guild.unavailable:
                 continue
 
-            total_members += len(guild.members)
+            # total_members += guild.member_count or 0 TODO ?
+            member_count = await self.bot.get_or_fetch_member_count(guild)
+            total_members += member_count
+
             for channel in guild.channels:
                 if isinstance(channel, discord.TextChannel):
                     text += 1
@@ -87,18 +86,14 @@ class AboutCommand(commands.Cog):
 
         await interaction.response.send_message(embed=embed, view=view)
 
-        msg = await interaction.original_message()
-        view.setOriginalMessage(msg)  # pass the original message into the class
+        view.message = await interaction.original_message()
 
     class CommitHistoryButton(discord.ui.View):
 
         def __init__(self, timeout=120, commandsCog=None):
             super().__init__(timeout=timeout)
-            self.message = None  # the original interaction message
+            self.message = None
             self.commandsCog = commandsCog
-
-        def setOriginalMessage(self, message: discord.Message):
-            self.message = message
 
         async def on_timeout(self) -> None:
             await self.message.edit(view=None)
@@ -148,7 +143,7 @@ class AboutCommand(commands.Cog):
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
             else:
                 await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
-                
+
         @discord.ui.button(emoji="<:left:882953998603288586>", style=discord.ButtonStyle.grey)
         async def back(self, interaction: discord.Interaction, button: discord.ui.Button):
             if self.page == 1:

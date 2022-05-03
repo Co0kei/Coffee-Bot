@@ -32,7 +32,8 @@ class CommandCog(commands.Cog):
                 guild_id = None
                 destination = 'Private Message'
             else:
-                guild = f'{interaction.guild.name} (ID: {interaction.guild.id}) ({len(interaction.guild.members):,} members)'
+                member_count = await self.bot.get_or_fetch_member_count(interaction.guild)
+                guild = f'{interaction.guild.name} (ID: {interaction.guild.id}) ({member_count:,} members)'
                 guild_id = interaction.guild.id
                 destination = f'#{interaction.channel}'
 
@@ -92,7 +93,8 @@ class CommandCog(commands.Cog):
             guild_id = None
             destination = 'Private Message'
         else:
-            guild = f'{ctx.guild.name} (ID: {ctx.guild.id}) ({len(ctx.guild.members):,} members)'
+            member_count = await self.bot.get_or_fetch_member_count(ctx.guild)
+            guild = f'{ctx.guild.name} (ID: {ctx.guild.id}) ({member_count:,} members)'
             guild_id = ctx.guild.id
             destination = f'#{message.channel}'
 

@@ -21,7 +21,13 @@ class JoinLeaveCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
-        log.info(f'I have been invited to {guild.name} ({guild.id}) which has {len(guild.members):,} members.')
+        # await guild.chunk(cache=True)
+        # while not guild.chunked:
+        #     log.info(f"Chunking guild {guild.name}")
+        #     await asyncio.sleep(1)
+        
+        member_count = await self.bot.get_or_fetch_member_count(guild)
+        log.info(f'I have been invited to {guild.name} ({guild.id}) which has {member_count:,} members.')
         e = discord.Embed(colour=0x53dda4, title='New Guild')  # green colour
 
         if guild.me.guild_permissions.view_audit_log:
@@ -32,31 +38,31 @@ class JoinLeaveCog(commands.Cog):
                 if target.id == self.bot.user.id:
                     try:
                         await inviter.send(f'Hey! :wave:\n'
-                                           f'Thanks for inviting me to **{guild.name}**! To get started, check out the **/help** and **/settings** command!\n'
+                                           f'Thanks for inviting me to **{guild.name}**! To get started, check out the **/help** and **/settings** commands!\n'
                                            f'For a detailed list of commands, features and examples, consider visiting my Top.gg page: '
-                                           f'https://top.gg/bot/950765718209720360', suppress_embeds=True)
+                                           f'https://top.gg/bot/950765718209720360 !', suppress_embeds=True)
                     except discord.Forbidden:
                         pass
                     e.description = f"Invited by `{inviter}`!"
                     break
 
-        await self.send_guild_stats(e, guild)
+        await self.send_guild_stats(e, guild, member_count)
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
-        log.info(f'I have been removed from {guild.name} ({guild.id}) which has {len(guild.members):,} members.')
+        member_count = await self.bot.get_or_fetch_member_count(guild)
+        log.info(f'I have been removed from {guild.name} ({guild.id}) which has {member_count:,} members.')
         e = discord.Embed(colour=0xdd5f53, title='Left Guild')  # red colour
-        await self.send_guild_stats(e, guild)
+        await self.send_guild_stats(e, guild, member_count)
 
-    async def send_guild_stats(self, e: discord.Embed, guild: discord.Guild):
+    async def send_guild_stats(self, e: discord.Embed, guild: discord.Guild, member_count: int):
         e.add_field(name='Name', value=guild.name)
         e.add_field(name='ID', value=guild.id)
         e.add_field(name='Shard ID', value=guild.shard_id or 'N/A')
         e.add_field(name='Owner', value=f'{guild.owner} (ID: {guild.owner_id})')
         bots = sum(m.bot for m in guild.members)
-        total = guild.member_count
-        e.add_field(name='Members', value=f"{total:,}")
-        e.add_field(name='Bots', value=f'{bots:,} ({bots / total:.2%})')
+        e.add_field(name='Members', value=f"{member_count:,}")
+        e.add_field(name='Bots', value=f'{bots:,} ({bots / member_count:.2%})')
 
         if guild.icon:
             e.set_thumbnail(url=guild.icon.url)

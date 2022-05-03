@@ -36,12 +36,11 @@ def get_prefix(bot, msg):
 # Define bot
 intents = discord.Intents.all()
 intents.typing = False
-# intents.presences = False
-# Without the presence intent, the internal member cache is slow to populate
+intents.presences = False
 bot = commands.Bot(command_prefix=get_prefix, owner_id=452187819738267687,
-                   case_insensitive=True, strip_after_prefix=True, max_messages=10000,
+                   case_insensitive=True, strip_after_prefix=True, max_messages=20000,
                    allowed_mentions=discord.AllowedMentions(roles=False, everyone=False, replied_user=False, users=True),
-                   intents=intents, help_command=None, chunk_guilds_at_startup=True,
+                   intents=intents, help_command=None, chunk_guilds_at_startup=True, member_cache_flags=discord.MemberCacheFlags.all(),
                    shard_count=1, shard_id=0)
 bot.default_prefix = prefix
 

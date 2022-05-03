@@ -47,7 +47,8 @@ class MetaCommands(commands.Cog):
     @commands.command(description="Displays a lil message")
     @commands.cooldown(5, 60.0, type=commands.BucketType.member)
     async def hello(self, ctx):
-        await ctx.reply(f'Hello! I\'m a robot! {self.bot.get_guild(DEV_SERVER_ID).get_member(self.bot.owner_id)} made me.')
+        owner = await self.bot.get_or_fetch_user(int(self.bot.owner_id))
+        await ctx.reply(f'Hello! I\'m a robot! {owner} made me.')
 
     @commands.command(description="Shows you information about a number of characters", usage="<char>")
     async def charinfo(self, ctx, *, characters: str = None):

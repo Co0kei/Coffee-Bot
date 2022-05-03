@@ -327,7 +327,7 @@ class OwnerCog(commands.Cog):
     async def backup(self, ctx):
 
         def _backup():
-            files = ['stats.json', 'votes.json']  # 'guild_settings.json',
+            files = ['stats.json']
 
             shutil.rmtree("backups")
             os.mkdir('backups')
@@ -652,7 +652,7 @@ class OwnerCog(commands.Cog):
         if author_id is None:
             member = guild.me
         else:
-            member = guild.get_member(int(author_id))
+            member = await self.bot.get_or_fetch_member(guild, int(author_id))
 
         if member is None:
             return await ctx.send('Member not found?')

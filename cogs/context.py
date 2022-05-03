@@ -15,6 +15,10 @@ class CustomContextCog(commands.Cog):
         self.bot = bot
         self.bot.get_context = self.get_context
 
+        self.bot.get_or_fetch_member = self.get_or_fetch_member
+        self.bot.get_or_fetch_user = self.get_or_fetch_user
+        self.bot.get_or_fetch_member_count = self.get_or_fetch_member_count
+
     # Custom Context
     class MyContext(commands.Context):
 
@@ -124,6 +128,68 @@ class CustomContextCog(commands.Cog):
     # async def guess(self, ctx, number: int):
     #     value = random.randint(1, 2)
     #     await ctx.tick(number == value)
+
+    # UTIL
+
+    async def get_or_fetch_user(self, user_id: int) -> Optional[discord.User]:
+        """ Looks up a member in cache or fetches if not found """
+        user = self.bot.get_user(user_id)
+        if user:
+            return user
+        try:
+            log.info(f"Making http request to fetch user {user_id}")
+            user = await self.bot.fetch_user(user_id)
+        except discord.HTTPException:
+            return None
+        else:
+            # if user:
+            #     # add to cache TODO
+            #     pass  # self.bot._connection._users[user.id] = user  # type: ignore
+            return user
+
+    async def get_or_fetch_member_count(self, guild: discord.Guild) -> int:
+        """ Looks up a guild count from cache or fetches if not found. """
+        if guild.member_count:
+            return guild.member_count
+
+        log.info(f"Making http request to fetch member count for guild {guild.id}")
+        guild = await self.bot.fetch_guild(guild.id, with_counts=True)
+        return guild.approximate_member_count
+
+    async def get_or_fetch_member(self, guild: discord.Guild, member_id: int) -> Optional[discord.Member]:
+        """ Looks up a member in cache or fetches if not found.
+
+        Parameters
+        -----------
+        guild: Guild
+            The guild to look in.
+        member_id: int
+            The member ID to search for.
+        Returns
+        ---------
+        Optional[Member]
+            The member or None if not found.
+        """
+
+        member = guild.get_member(member_id)
+        if member:
+            return member
+
+        # shard: discord.ShardInfo = bot.get_shard(guild.shard_id)
+        if self.bot.is_ws_ratelimited():
+            try:
+                log.info(f"Making http request to fetch member {member_id} in guild {guild.id}")
+                member = await guild.fetch_member(member_id)
+            except discord.HTTPException:
+                return None
+            else:
+                return member
+
+        log.info(f"Querying gateway for member {member_id} in guild {guild.id}")
+        members = await guild.query_members(limit=1, user_ids=[member_id], cache=True)
+        if not members:
+            return None
+        return members[0]
 
 
 async def setup(bot):

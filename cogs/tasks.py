@@ -29,7 +29,7 @@ class TaskCog(commands.Cog):
             difference = (current_time - last_vote)
             # log.info(f'{discord_id} {last_vote} {difference}')
             if 43200 < difference < 43260:  # num of seconds in 12 hours # 0 < difference < 60:  #
-                user = self.bot.get_user(int(discord_id)) or await self.bot.fetch_user(int(discord_id))
+                user = await self.bot.get_or_fetch_user(int(discord_id))
                 log.info(f"Attempting to send vote reminder to {user}")
                 if user:
                     try:
@@ -47,7 +47,7 @@ class TaskCog(commands.Cog):
             difference = (current_time - last_vote)
             # log.info(f'{discord_id} {last_vote} {difference}')
             if difference > 50400:  # num of seconds in 14 hours - so reminders send every 2 hours after if you dont vote before that
-                user = self.bot.get_user(int(discord_id)) or await self.bot.fetch_user(int(discord_id))
+                user = await self.bot.get_or_fetch_user(int(discord_id))
                 log.info(f"Attempting to send vote reminder to {user}")
                 if user:
                     try:
