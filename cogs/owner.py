@@ -247,11 +247,10 @@ class OwnerCog(commands.Cog):
             # with open('guild_settings.json', 'w', encoding='utf-8') as f:
             #     json.dump(self.bot.guild_settings, f, ensure_ascii=False, indent=4)
             #     f.close()
-
-            # save vote data
-            with open('votes.json', 'w', encoding='utf-8') as f:
-                json.dump(self.bot.vote_data, f, ensure_ascii=False, indent=4)
-                f.close()
+            # # save vote data
+            # with open('votes.json', 'w', encoding='utf-8') as f:
+            #     json.dump(self.bot.vote_data, f, ensure_ascii=False, indent=4)
+            #     f.close()
 
         async with self.lock:
             await self.bot.loop.run_in_executor(None, _dump)
@@ -274,11 +273,10 @@ class OwnerCog(commands.Cog):
             #     data = json.load(f)
             #     self.bot.guild_settings = data  # load guild settings
             #     f.close()
-
-            with open('votes.json', 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                self.bot.vote_data = data  # load vote data
-                f.close()
+            # with open('votes.json', 'r', encoding='utf-8') as f:
+            #     data = json.load(f)
+            #     self.bot.vote_data = data  # load vote data
+            #     f.close()
 
         await self.load_guilds()
 
@@ -352,7 +350,7 @@ class OwnerCog(commands.Cog):
         example_data = {'user': id, 'type': 'upvote', 'query': {}, 'bot': 950765718209720360,
                         'is_weekend': is_weekend}
 
-        await self.bot.get_cog("EventCog").on_dbl_vote(example_data)
+        await self.bot.get_cog("VoteCog").on_dbl_vote(example_data)
         await ctx.message.reply("Vote simulated!\n" + str(example_data))
 
     @commands.is_owner()
@@ -395,19 +393,13 @@ class OwnerCog(commands.Cog):
     @commands.is_owner()
     @commands.command(name="stop", aliases=["close"], description="Gracefully stops the bot")
     async def _stop(self, ctx):
-
+        # Alert me if anyone is expecting an alert in next 2 hours
         msg = ""
         current_time: int = int(time.time())
-        if "vote_reminder" in self.bot.vote_data:
-            # check for vote alerts within the next 2 hours
-            vote_reminders: list = self.bot.vote_data["vote_reminder"]
-            if len(vote_reminders) != 0:
-                for discordID in vote_reminders:
-                    last_vote = self.bot.vote_data[str(discordID)]["last_vote"]
-                    difference = (current_time - last_vote)
-                    if difference > 36000:  # num of seconds in 10 hours
-                        # alert me if anyone is expecting an alert in next 2 hours
-                        msg += f'`+` Discord ID {discordID} is expecting a vote reminder <t:{self.bot.vote_data[str(discordID)]["last_vote"] + 43200}:R>\n'
+        for discord_id, last_vote in self.bot.stat_data["vote_reminders"].items():
+            difference = (current_time - last_vote)
+            if difference > 36000:  # num of seconds in 10 hours
+                msg += f'`+` Discord ID {discord_id} is expecting a vote reminder <t:{last_vote + 43200}:R>\n'
 
         if msg == "":
             msg = "None"
