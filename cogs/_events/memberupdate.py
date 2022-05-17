@@ -30,17 +30,31 @@ class MemberUpdateCog(commands.Cog):
 
         if before.roles != after.roles and settingsCommand.getRoleUpdateChannel(after.guild):
 
-            for role in before.roles:  # if a role is deleted, dont send members losing role individually but in one embed / file
-                if role not in after.roles:
-                    # checking ROLES LOST
-                    await asyncio.sleep(0.4)  # give role delete event time
-                    # print(self.bot.delete_role_cache)
-                    if str(role.id) in self.bot.delete_role_cache:
-                        self.bot.delete_role_cache[str(role.id)].append(after.id)
-                        # print(self.bot.delete_role_cache[str(role.id)])
-                        return
+            roles_gained = []
+            for role in after.roles:
+                if role not in before.roles:
+                    roles_gained.append(role)
 
-            await self.bot.get_cog("AuditLogCog").handleRoleUpdate(before, after)
+            roles_lost = []
+            for role in before.roles:
+                if role not in after.roles:
+                    roles_lost.append(role)
+
+            # # TEST
+            # __role = after.guild.get_role(878653340865683457)
+            # _role = after.guild.get_role(872828547562082314)
+            # if __role in roles_gained:
+            #     await after.add_roles(_role)
+            # if __role in roles_lost:
+            #     await after.remove_roles(_role)
+
+            await asyncio.sleep(0.2)  # give role delete event time
+            for role in roles_lost:  # if a role is deleted, dont send members losing role individually but in one embed / file
+                if str(role.id) in self.bot.delete_role_cache:
+                    self.bot.delete_role_cache[str(role.id)].append(after.id)
+                    return
+
+            await self.bot.get_cog("AuditLogCog").handleRoleUpdate(before, after, roles_gained, roles_lost)
 
         elif before.nick != after.nick and settingsCommand.getNickUpdateChannel(after.guild):
             await self.bot.get_cog("AuditLogCog").handleNickUpdate(before, after)
@@ -52,5 +66,4 @@ class MemberUpdateCog(commands.Cog):
 async def setup(bot):
     if not hasattr(bot, 'delete_role_cache'):
         bot.delete_role_cache = {}
-
     await bot.add_cog(MemberUpdateCog(bot))

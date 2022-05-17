@@ -426,75 +426,65 @@ class AuditLogCog(commands.Cog):
 
             await settingsCog.getMemberTimeoutChannel(after.guild).send(embed=embed)
 
-    async def handleRoleUpdate(self, before: discord.Member, after: discord.Member):
-        roles_gained = []
-        for role in after.roles:
-            if role not in before.roles:
-                roles_gained.append(role)
+    async def handleRoleUpdate(self, before: discord.Member, after: discord.Member, roles_gained: list[discord.Role], roles_lost: list[discord.Role]):
 
-        roles_lost = []
-        for role in before.roles:
-            if role not in after.roles:
-                roles_lost.append(role)
+        settingsCog = self.bot.get_cog("SettingsCommand")
 
-        async for entry in after.guild.audit_logs(limit=1, action=discord.AuditLogAction.member_role_update):
-            # entry_created = entry.created_at
-            # roles_before = entry.changes.before.roles
-            # roles_after = entry.changes.after.roles
-            #
+        async for entry in after.guild.audit_logs(limit=10, action=discord.AuditLogAction.member_role_update, oldest_first=False):
+            roles_before = entry.changes.before.roles
+            roles_after = entry.changes.after.roles
             # print(roles_before)
             # print(roles_after)
-            #
-            # # if time - entry_created < timedelta(seconds=1):
-            # #     updated_by = entry.user
 
-            settingsCog = self.bot.get_cog("SettingsCommand")
-            if entry.user.bot and not settingsCog.isLogBotActionsEnabled(after.guild):
+            if roles_after == roles_gained and roles_before == roles_lost:
+
+                if entry.user.bot and not settingsCog.isLogBotActionsEnabled(after.guild):
+                    return
+
+                change_list = ""
+                if roles_gained:
+                    suffix = "s"
+                    if len(roles_gained) == 1:
+                        suffix = ""
+                    change_list += (f"**Role{suffix} Gained ({len(roles_gained)}):**\n")
+
+                for role in roles_gained:
+
+                    if role.is_premium_subscriber() or role.is_bot_managed():
+                        given_by = "Discord"
+                    elif role.is_integration():
+                        given_by = "An Integration"
+                    else:
+                        given_by = f"{entry.user.mention} ({discord.utils.escape_markdown(str(entry.user))})"
+
+                    change_list += (f"<:tick:873224615881748523> {role.mention} (Name: {role.name}) | Given by {given_by}\n")
+
+                if roles_lost:
+                    suffix = "s"
+                    if len(roles_lost) == 1:
+                        suffix = ""
+                    change_list += (f"**Role{suffix} Lost ({len(roles_lost)}):**\n")
+
+                for role in roles_lost:
+
+                    if role.is_premium_subscriber() or role.is_bot_managed():
+                        removed_by = "Discord"
+                    elif role.is_integration():
+                        removed_by = "An Integration"
+                    else:
+                        removed_by = f"{entry.user.mention} ({discord.utils.escape_markdown(str(entry.user))})"
+
+                    change_list += (f"<:cross:872834807476924506> {role.mention} (Name: {role.name}) | Removed by {removed_by}\n")
+
+                embed = discord.Embed()
+                embed.set_author(name="Role Update", icon_url=after.display_avatar.url)
+                embed.colour = discord.Colour(0x2F3136)
+
+                embed.description = f"**Member:** {after.mention}  ({discord.utils.escape_markdown(str(after))})\n" \
+                                    f"{change_list}"
+
+                await settingsCog.getRoleUpdateChannel(after.guild).send(embed=embed)
                 return
-
-            change_list = ""
-            if roles_gained:
-                suffix = "s"
-                if len(roles_gained) == 1:
-                    suffix = ""
-                change_list += (f"**Role{suffix} Gained ({len(roles_gained)}):**\n")
-
-            for role in roles_gained:
-
-                if role.is_premium_subscriber() or role.is_bot_managed():
-                    given_by = "Discord"
-                elif role.is_integration():
-                    given_by = "An Integration"
-                else:
-                    given_by = f"{entry.user.mention} ({discord.utils.escape_markdown(str(entry.user))})"
-
-                change_list += (f"<:tick:873224615881748523> {role.mention} (Name: {role.name}) | Given by {given_by}\n")
-
-            if roles_lost:
-                suffix = "s"
-                if len(roles_lost) == 1:
-                    suffix = ""
-                change_list += (f"**Role{suffix} Lost ({len(roles_lost)}):**\n")
-
-            for role in roles_lost:
-
-                if role.is_premium_subscriber() or role.is_bot_managed():
-                    removed_by = "Discord"
-                elif role.is_integration():
-                    removed_by = "An Integration"
-                else:
-                    removed_by = f"{entry.user.mention} ({discord.utils.escape_markdown(str(entry.user))})"
-
-                change_list += (f"<:cross:872834807476924506> {role.mention} (Name: {role.name}) | Removed by {removed_by}\n")
-
-            embed = discord.Embed()
-            embed.set_author(name="Role Update", icon_url=after.display_avatar.url)
-            embed.colour = discord.Colour(0x2F3136)
-
-            embed.description = f"**Member:** {after.mention}  ({discord.utils.escape_markdown(str(after))})\n" \
-                                f"{change_list}"
-
-            await settingsCog.getRoleUpdateChannel(after.guild).send(embed=embed)
 
     async def handleRoleDelete(self, role: discord.Role):
         self.bot.delete_role_cache[str(role.id)] = []
