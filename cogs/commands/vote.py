@@ -185,7 +185,7 @@ class VoteCommand(commands.Cog):
             else:
                 await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
 
-        @discord.ui.button(emoji="<:left:882953998603288586>", style=discord.ButtonStyle.grey)
+        @discord.ui.button(emoji="<:left:973930406149750814>", style=discord.ButtonStyle.grey)
         async def back(self, interaction: discord.Interaction, button: discord.ui.Button):
             if self.page == 1:
                 self.page = self.total_pages
@@ -193,7 +193,7 @@ class VoteCommand(commands.Cog):
                 self.page -= 1
             await interaction.response.edit_message(embed=self.main_view.get_embed(self.page))
 
-        @discord.ui.button(emoji="<:right:882953977388486676>", style=discord.ButtonStyle.grey)
+        @discord.ui.button(emoji="<:right:973930399782805574>", style=discord.ButtonStyle.grey)
         async def forward(self, interaction: discord.Interaction, button: discord.ui.Button):
             if self.page == self.total_pages:
                 self.page = 1
