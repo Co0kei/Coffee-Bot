@@ -566,8 +566,8 @@ class OwnerCog(commands.Cog):
 
         bad_inner_tasks = ", ".join(hex(id(t)) for t in inner_tasks if t.done() and t._exception is not None)
         total_warnings += bool(bad_inner_tasks)
-        embed.add_field(name='Inner Tasks', value=f'Total: {len(inner_tasks)}\nFailed: {bad_inner_tasks or "None"}')
-        embed.add_field(name='Events Waiting', value=f'Total: {len(event_tasks)}', inline=False)
+        embed.add_field(name='Inner Tasks', value=f'Total: {len(inner_tasks)} | {inner_tasks}\nFailed: {bad_inner_tasks or "None"}')
+        embed.add_field(name='Events Waiting', value=f'Total: {len(event_tasks)} | {event_tasks}', inline=False)
 
         command_waiters = len(self.bot.get_cog('StatsCog')._data_batch)
         is_locked = self.bot.get_cog('StatsCog')._batch_lock.locked()
@@ -575,7 +575,7 @@ class OwnerCog(commands.Cog):
 
         memory_usage = self.bot.get_cog('AboutCommand').process.memory_full_info().uss / 1024 ** 2
         cpu_usage = self.bot.get_cog('AboutCommand').process.cpu_percent() / psutil.cpu_count()
-        embed.add_field(name='Process', value=f'{memory_usage:.2f} MB\n{cpu_usage:.2f}% CPU', inline=False)
+        embed.add_field(name='Process', value=f'{memory_usage:.2f} MiB\n{cpu_usage:.2f}% CPU', inline=False)
 
         global_rate_limit = self.bot.is_ws_ratelimited()  # not self.bot.http._global_over.is_set()
         description.append(f'Global Rate Limit: {global_rate_limit}')
@@ -598,7 +598,7 @@ class OwnerCog(commands.Cog):
         minutes = delta.total_seconds() / 60
         total = sum(self.bot.socket_stats.values())
         cpm = total / minutes
-        await ctx.send(f'{total} socket events observed ({cpm:.2f}/minute):\n{self.bot.socket_stats}')
+        await ctx.send(f'{total} socket events observed ({cpm:.2f}/minute) | {self.bot.socket_stats["MESSAGE_CREATE"] / minutes:.2f} messages/minute:\n{self.bot.socket_stats}')
 
     @commands.is_owner()
     @commands.command(aliases=['cancel_task'], description="Debug a task by a memory location", usage="<memory_id>")
