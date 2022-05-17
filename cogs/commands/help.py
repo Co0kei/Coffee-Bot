@@ -35,7 +35,7 @@ class HelpCommand(commands.Cog):
 
     class MiscCommandsButton(discord.ui.View):
 
-        def __init__(self, timeout=120, cog=None):
+        def __init__(self, timeout=None, cog=None):
             super().__init__(timeout=timeout)
             self.message = None
             self.cog = cog
@@ -43,13 +43,13 @@ class HelpCommand(commands.Cog):
             self.add_item(discord.ui.Button(label="Top.gg", emoji="<:topgg:963166927843364874>", url="https://top.gg/bot/950765718209720360"))
             self.add_item(discord.ui.Button(label="GitHub", emoji="<:github:962089212365111327>", url="https://github.com/Co0kei/Coffee-Bot"))
             self.add_item(discord.ui.Button(label="Invite", emoji="📩", url=discord.utils.oauth_url(cog.bot.user.id, permissions=discord.Permissions(8))))
+            self.add_item(discord.ui.Button(label="Support", emoji="<:Discord:853958437847564298>", url="https://discord.gg/rcUzqaQN8k"))
+            # self.remove_item(self.miscCommands)  # reorder
+            # self.add_item(self.miscCommands)
 
-            self.remove_item(self.miscCommands)  # reorder
-            self.add_item(self.miscCommands)
-
-        async def on_timeout(self) -> None:
-            self.remove_item(self.miscCommands)
-            await self.message.edit(view=self)
+        # async def on_timeout(self) -> None:
+        #     self.remove_item(self.miscCommands)
+        #     await self.message.edit(view=self)
 
         async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
             log.exception(error)
@@ -58,29 +58,29 @@ class HelpCommand(commands.Cog):
             else:
                 await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
 
-        @discord.ui.button(label='Misc Commands', emoji="\U00002755", style=discord.ButtonStyle.blurple)
-        async def miscCommands(self, interaction: discord.Interaction, button: discord.ui.Button):
-
-            if interaction.guild:
-                prefix = self.cog.bot.get_cog('SettingsCommand').getPrefix(interaction.guild)
-            else:
-                prefix = self.cog.bot.default_prefix
-
-            prefix_commands = ""
-            for command in self.cog.bot.get_cog('MetaCommands').walk_commands():
-                cmd = f'**{prefix}{command.name}'
-                if command.usage:
-                    cmd += f' {command.usage}'
-                cmd += "**"
-                if command.aliases:
-                    cmd += f" - ({', '.join(command.aliases)})"
-                cmd += f" - {command.description}\n"
-                prefix_commands += cmd
-
-            embed = discord.Embed(colour=discord.Colour.blurple())
-            embed.description = f"**__Misc Commands__**\n{prefix_commands}"
-            embed.set_footer(text="You can configure the prefix in the /settings command")
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+        # @discord.ui.button(label='Misc Commands', emoji="\U00002755", style=discord.ButtonStyle.blurple)
+        # async def miscCommands(self, interaction: discord.Interaction, button: discord.ui.Button):
+        #
+        #     if interaction.guild:
+        #         prefix = self.cog.bot.get_cog('SettingsCommand').getPrefix(interaction.guild)
+        #     else:
+        #         prefix = self.cog.bot.default_prefix
+        #
+        #     prefix_commands = ""
+        #     for command in self.cog.bot.get_cog('MetaCommands').walk_commands():
+        #         cmd = f'**{prefix}{command.name}'
+        #         if command.usage:
+        #             cmd += f' {command.usage}'
+        #         cmd += "**"
+        #         if command.aliases:
+        #             cmd += f" - ({', '.join(command.aliases)})"
+        #         cmd += f" - {command.description}\n"
+        #         prefix_commands += cmd
+        #
+        #     embed = discord.Embed(colour=discord.Colour.blurple())
+        #     embed.description = f"**__Misc Commands__**\n{prefix_commands}"
+        #     embed.set_footer(text="You can configure the prefix in the /settings command")
+        #     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot):
