@@ -159,6 +159,17 @@ class SettingsCommand(commands.Cog):
             elif button == "Message Edit":
                 model = self.cog.MessageEditChannelModel(self.bot, self)
                 await interaction.response.send_modal(model)
+            elif button == "Nickname Edit":
+                model = self.cog.NicknameEditChannelModel(self.bot, self)
+                await interaction.response.send_modal(model)
+            elif button == "Member Timeout":
+                model = self.cog.MemberTimeoutChannelModel(self.bot, self)
+                await interaction.response.send_modal(model)
+            elif button == "Role Update":
+                model = self.cog.RoleUpdateChannelModel(self.bot, self)
+                await interaction.response.send_modal(model)
+            elif button == "Log Bot Actions":
+                await self.cog.toggleLogBotActions(interaction, self)
 
             # misc
             elif button == "Prefix":
@@ -332,13 +343,49 @@ class SettingsCommand(commands.Cog):
                             value=f"_Description_: Logs when a member edits their message.\n"
                                   f"_Value_: {msg_edit_channel}", inline=False)
 
+            nick_edit_channel = self.getNickUpdateChannel(guild)
+            if nick_edit_channel:
+                nick_edit_channel = nick_edit_channel.mention
+            else:
+                nick_edit_channel = "`None`"
+            embed.add_field(name='<:nick:976126467601752094> **Nickname Edit**',
+                            value=f"_Description_: Logs when a member's nickname is changed.\n"
+                                  f"_Value_: {nick_edit_channel}", inline=False)
+
+            member_timeout_channel = self.getMemberTimeoutChannel(guild)
+            if member_timeout_channel:
+                member_timeout_channel = member_timeout_channel.mention
+            else:
+                member_timeout_channel = "`None`"
+            embed.add_field(name='<a:timeout:976126462518243400> **Member Timeout**',
+                            value=f"_Description_: Logs when a member gets timed out.\n"
+                                  f"_Value_: {member_timeout_channel}", inline=False)
+
+            role_update_channel = self.getRoleUpdateChannel(guild)
+            if role_update_channel:
+                role_update_channel = role_update_channel.mention
+            else:
+                role_update_channel = "`None`"
+            embed.add_field(name='<:role:976126458231660586> **Role Update**',
+                            value=f"_Description_: Logs when a member's roles gets changed.\n"
+                                  f"_Value_: {role_update_channel}", inline=False)
+
+            if self.isLogBotActionsEnabled(guild):
+                log_bot_actions = "`Enabled` <:tick:873224615881748523>"
+            else:
+                log_bot_actions = "`Disabled` <:cross:872834807476924506>"
+            embed.add_field(name='<:bot:966666994357248031> **Log Bot Actions**',
+                            value=f"_Description_: When enabled actions by bots are logged. This includes a bot deleting/editing its OWN messages, a bot editing a member's nickname, "
+                                  f"a bot timing out a member or a bot updating a member's roles. Disable this for less spammy logs.\n"
+                                  f"_Value_: {log_bot_actions}", inline=False)
+
             return embed
 
         elif type == SettingPage.Misc:
             embed = discord.Embed(title="Settings", description=f'Click a button to edit the value.', colour=discord.Colour.blurple())
             embed.set_author(name="Miscellaneous", icon_url="https://cdn.discordapp.com/attachments/878620836284747788/966669697149992990/Discord_settings.png")
             embed.add_field(name=':grey_exclamation: **Prefix**',
-                            value=f"_Description_: Set the prefix for any non slash commands to respond to. See /help\n"
+                            value=f"_Description_: Set the prefix for any non slash commands to respond to.\n"
                                   f"_Value_: `{self.getPrefix(guild)}`", inline=False)
             return embed
 
@@ -371,6 +418,13 @@ class SettingsCommand(commands.Cog):
                 discord.ui.Button(custom_id="Message Delete", style=discord.ButtonStyle.blurple, emoji="<:delete:969326302828036096>", row=1),
                 discord.ui.Button(custom_id="Mod Message Delete", style=discord.ButtonStyle.blurple, emoji="<:delete:969323891883405342>", row=1),
                 discord.ui.Button(custom_id="Message Edit", style=discord.ButtonStyle.blurple, emoji="<:edit:969323916403286046>", row=1),
+
+                discord.ui.Button(custom_id="Nickname Edit", style=discord.ButtonStyle.blurple, emoji="<:nick:976126467601752094>", row=2),
+                discord.ui.Button(custom_id="Member Timeout", style=discord.ButtonStyle.blurple, emoji="<:timeout:976126462518243400>", row=2),
+                discord.ui.Button(custom_id="Role Update", style=discord.ButtonStyle.blurple, emoji="<:role:976126458231660586>", row=2),
+
+                discord.ui.Button(custom_id="Log Bot Actions", style=discord.ButtonStyle.green if self.isLogBotActionsEnabled(guild) else discord.ButtonStyle.red, emoji="<:bot:966666994357248031>",
+                                  row=3)
             ]
 
         elif type == SettingPage.Misc:
@@ -501,6 +555,34 @@ class SettingsCommand(commands.Cog):
                 msg_edit_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["msg_edit_channel_id"])
         return msg_edit_channel
 
+    def getNickUpdateChannel(self, guild: discord.Guild) -> discord.TextChannel:
+        nick_edit_channel = None
+        if str(guild.id) in self.bot.guild_settings:
+            if "nick_edit_channel_id" in self.bot.guild_settings[str(guild.id)]:
+                nick_edit_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["nick_edit_channel_id"])
+        return nick_edit_channel
+
+    def getMemberTimeoutChannel(self, guild: discord.Guild) -> discord.TextChannel:
+        member_timeout_channel = None
+        if str(guild.id) in self.bot.guild_settings:
+            if "member_timeout_channel_id" in self.bot.guild_settings[str(guild.id)]:
+                member_timeout_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["member_timeout_channel_id"])
+        return member_timeout_channel
+
+    def getRoleUpdateChannel(self, guild: discord.Guild) -> discord.TextChannel:
+        role_update_channel = None
+        if str(guild.id) in self.bot.guild_settings:
+            if "role_update_channel_id" in self.bot.guild_settings[str(guild.id)]:
+                role_update_channel = guild.get_channel(self.bot.guild_settings[str(guild.id)]["role_update_channel_id"])
+        return role_update_channel
+
+    def isLogBotActionsEnabled(self, guild: discord.Guild) -> bool:
+        log_bot_actions = True
+        if str(guild.id) in self.bot.guild_settings:
+            if "log_bot_actions" in self.bot.guild_settings[str(guild.id)]:
+                log_bot_actions = self.bot.guild_settings[str(guild.id)]["log_bot_actions"]
+        return log_bot_actions
+
     def getPrefix(self, guild: discord.Guild) -> str:
         prefix = self.bot.default_prefix
         if str(guild.id) in self.bot.guild_settings:
@@ -581,6 +663,22 @@ class SettingsCommand(commands.Cog):
 
         # Save in memory
         self.bot.guild_settings[str(guild_id)]["link_filter"] = link_filter
+
+        await main_view.refreshEmbed(interaction=interaction, reloadView=True)  # Update main embed
+
+    async def toggleLogBotActions(self, interaction: discord.Interaction, main_view: discord.ui.View):
+        guild_id = interaction.guild.id
+        log_bot_actions = not self.isLogBotActionsEnabled(guild=interaction.guild)
+
+        # Save to postgreSQL
+        query = "UPDATE guilds SET log_bot_actions = $1 WHERE guild_id = $2;"
+        async with self.bot.pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(query, log_bot_actions, guild_id)
+
+        # Save in memory
+        self.bot.guild_settings[str(guild_id)]["log_bot_actions"] = log_bot_actions
+        # log.info(self.bot.guild_settings[str(guild_id)])
 
         await main_view.refreshEmbed(interaction=interaction, reloadView=True)  # Update main embed
 
@@ -1173,6 +1271,183 @@ class SettingsCommand(commands.Cog):
 
                 # Save in memory
                 self.bot.guild_settings[str(guild_id)]["msg_edit_channel_id"] = channel.id
+
+                await self.main_view.refreshEmbed()
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # log.info(self.bot.guild_settings[str(guild_id)])
+
+    class NicknameEditChannelModel(ui.Modal):
+        def __init__(self, bot=None, main_view=None):
+            super().__init__(title="Nickname Edit Channel")
+            self.bot = bot
+            self.main_view = main_view
+
+        channel = ui.TextInput(label='Nickname Edit Channel', style=discord.TextStyle.short,
+                               placeholder="Please enter the channel name or id, such as #logs",
+                               required=True, max_length=1000)
+
+        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+
+        async def on_submit(self, interaction: Interaction):
+            guild_id = interaction.guild.id
+            nickEditChannel = self.channel.value.lower()
+            channel = self.main_view.cog.checkValidChannel(nickEditChannel, interaction.guild)
+
+            if nickEditChannel == "none" or nickEditChannel == "reset":
+                embed = discord.Embed(title="Channel reset", description="You have removed the Nickname Edit Channel.", colour=discord.Colour.green())
+
+                if "nick_edit_channel_id" in self.bot.guild_settings[str(guild_id)]:
+                    # Save to postgreSQL - NONE
+                    query = "UPDATE guilds SET nick_edit_channel_id = $1 WHERE guild_id = $2;"
+                    async with self.bot.pool.acquire() as conn:
+                        async with conn.transaction():
+                            await conn.execute(query, None, guild_id)
+
+                    # Save in memory
+                    del self.bot.guild_settings[str(guild_id)]["nick_edit_channel_id"]
+
+                    await self.main_view.refreshEmbed()
+
+            elif channel is None:
+                embed = discord.Embed(title="Channel not found",
+                                      description="Please enter a valid channel name.\nTo remove the current channel, enter `reset` instead of a channel name.",
+                                      colour=discord.Colour.dark_red())
+            else:
+                embed = discord.Embed(title="Nickname Edit Channel Updated", description=f"Successfully updated the nickname edit channel to {channel.mention}",
+                                      colour=discord.Colour.green())
+
+                # Save to postgreSQL
+                query = "UPDATE guilds SET nick_edit_channel_id = $1 WHERE guild_id = $2;"
+                async with self.bot.pool.acquire() as conn:
+                    async with conn.transaction():
+                        await conn.execute(query, channel.id, guild_id)
+
+                # Save in memory
+                self.bot.guild_settings[str(guild_id)]["nick_edit_channel_id"] = channel.id
+
+                await self.main_view.refreshEmbed()
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # log.info(self.bot.guild_settings[str(guild_id)])
+
+    class MemberTimeoutChannelModel(ui.Modal):
+        def __init__(self, bot=None, main_view=None):
+            super().__init__(title="Member Timeout Channel")
+            self.bot = bot
+            self.main_view = main_view
+
+        channel = ui.TextInput(label='Member Timeout Channel', style=discord.TextStyle.short,
+                               placeholder="Please enter the channel name or id, such as #logs",
+                               required=True, max_length=1000)
+
+        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+
+        async def on_submit(self, interaction: Interaction):
+            guild_id = interaction.guild.id
+            memTimeoutChannel = self.channel.value.lower()
+            channel = self.main_view.cog.checkValidChannel(memTimeoutChannel, interaction.guild)
+
+            if memTimeoutChannel == "none" or memTimeoutChannel == "reset":
+                embed = discord.Embed(title="Channel reset", description="You have removed the Member Timeout Channel.", colour=discord.Colour.green())
+
+                if "member_timeout_channel_id" in self.bot.guild_settings[str(guild_id)]:
+                    # Save to postgreSQL - NONE
+                    query = "UPDATE guilds SET member_timeout_channel_id = $1 WHERE guild_id = $2;"
+                    async with self.bot.pool.acquire() as conn:
+                        async with conn.transaction():
+                            await conn.execute(query, None, guild_id)
+
+                    # Save in memory
+                    del self.bot.guild_settings[str(guild_id)]["member_timeout_channel_id"]
+
+                    await self.main_view.refreshEmbed()
+
+            elif channel is None:
+                embed = discord.Embed(title="Channel not found",
+                                      description="Please enter a valid channel name.\nTo remove the current channel, enter `reset` instead of a channel name.",
+                                      colour=discord.Colour.dark_red())
+            else:
+                embed = discord.Embed(title="Member Timeout Channel Updated", description=f"Successfully updated the member timeout channel to {channel.mention}",
+                                      colour=discord.Colour.green())
+
+                # Save to postgreSQL
+                query = "UPDATE guilds SET member_timeout_channel_id = $1 WHERE guild_id = $2;"
+                async with self.bot.pool.acquire() as conn:
+                    async with conn.transaction():
+                        await conn.execute(query, channel.id, guild_id)
+
+                # Save in memory
+                self.bot.guild_settings[str(guild_id)]["member_timeout_channel_id"] = channel.id
+
+                await self.main_view.refreshEmbed()
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # log.info(self.bot.guild_settings[str(guild_id)])
+
+    class RoleUpdateChannelModel(ui.Modal):
+        def __init__(self, bot=None, main_view=None):
+            super().__init__(title="Role Update Channel")
+            self.bot = bot
+            self.main_view = main_view
+
+        channel = ui.TextInput(label='Role Update Channel', style=discord.TextStyle.short,
+                               placeholder="Please enter the channel name or id, such as #logs",
+                               required=True, max_length=1000)
+
+        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+            log.exception(error)
+            if interaction.response.is_done():
+                await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
+            else:
+                await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
+
+        async def on_submit(self, interaction: Interaction):
+            guild_id = interaction.guild.id
+            roleUpdateChannel = self.channel.value.lower()
+            channel = self.main_view.cog.checkValidChannel(roleUpdateChannel, interaction.guild)
+
+            if roleUpdateChannel == "none" or roleUpdateChannel == "reset":
+                embed = discord.Embed(title="Channel reset", description="You have removed the Role Update Channel.", colour=discord.Colour.green())
+
+                if "role_update_channel_id" in self.bot.guild_settings[str(guild_id)]:
+                    # Save to postgreSQL - NONE
+                    query = "UPDATE guilds SET role_update_channel_id = $1 WHERE guild_id = $2;"
+                    async with self.bot.pool.acquire() as conn:
+                        async with conn.transaction():
+                            await conn.execute(query, None, guild_id)
+
+                    # Save in memory
+                    del self.bot.guild_settings[str(guild_id)]["role_update_channel_id"]
+
+                    await self.main_view.refreshEmbed()
+
+            elif channel is None:
+                embed = discord.Embed(title="Channel not found",
+                                      description="Please enter a valid channel name.\nTo remove the current channel, enter `reset` instead of a channel name.",
+                                      colour=discord.Colour.dark_red())
+            else:
+                embed = discord.Embed(title="Role Update Channel Updated", description=f"Successfully updated the role update channel to {channel.mention}",
+                                      colour=discord.Colour.green())
+
+                # Save to postgreSQL
+                query = "UPDATE guilds SET role_update_channel_id = $1 WHERE guild_id = $2;"
+                async with self.bot.pool.acquire() as conn:
+                    async with conn.transaction():
+                        await conn.execute(query, channel.id, guild_id)
+
+                # Save in memory
+                self.bot.guild_settings[str(guild_id)]["role_update_channel_id"] = channel.id
 
                 await self.main_view.refreshEmbed()
 
