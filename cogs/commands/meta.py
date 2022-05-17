@@ -248,6 +248,7 @@ class MetaCommands(commands.Cog):
     @commands.cooldown(5, 30.0, type=commands.BucketType.member)
     # @commands.dynamic_cooldown(custom_cooldown, commands.BucketType.member)
     @commands.guild_only()
+    @commands.is_owner()
     async def stats(self, ctx, *, member: discord.Member = None):
         async with ctx.typing():
             if member is None:
