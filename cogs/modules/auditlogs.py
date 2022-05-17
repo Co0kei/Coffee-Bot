@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import timedelta
 from io import BytesIO
@@ -13,6 +14,10 @@ class AuditLogCog(commands.Cog):
         self.bot = bot
 
     async def handleEdit(self, before: discord.Message, after: discord.Message):
+
+        settingsCog = self.bot.get_cog("SettingsCommand")
+        if after.author.bot and not settingsCog.isLogBotActionsEnabled(after.guild):
+            return
 
         embed = discord.Embed()
         embed.set_author(name="Message Edited", icon_url=after.author.display_avatar.url)
@@ -57,17 +62,20 @@ class AuditLogCog(commands.Cog):
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Jump to message", url=after.jump_url))
 
-        settingsCog = self.bot.get_cog("SettingsCommand")
         await settingsCog.getMsgEditChannel(after.guild).send(content=content, embed=embed, file=file, view=view)
 
     async def handleRawEdit(self, payload: discord.RawMessageUpdateEvent, guild: discord.Guild):
         """ Message before is unknown """
 
         channel = guild.get_channel(payload.channel_id)
-        message: discord.Message = await channel.fetch_message(payload.message_id)
+        try:
+            message: discord.Message = await channel.fetch_message(payload.message_id)
+        except discord.NotFound:  # message not found?
+            return
 
-        if message.author.bot:
-            return  # ppl dont care about bot editing its own message
+        settingsCog = self.bot.get_cog("SettingsCommand")
+        if message.author.bot and not settingsCog.isLogBotActionsEnabled(guild):
+            return
 
         embed = discord.Embed()
         embed.set_author(name="Message Edited", icon_url=message.author.display_avatar.url)
@@ -114,7 +122,6 @@ class AuditLogCog(commands.Cog):
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Jump to message", url=message.jump_url))
 
-        settingsCog = self.bot.get_cog("SettingsCommand")
         await settingsCog.getMsgEditChannel(guild).send(content=content, embed=embed, file=file, view=view)
 
     async def handleDelete(self, message: discord.Message):
@@ -163,8 +170,9 @@ class AuditLogCog(commands.Cog):
                     break
             # otherwise message deleted by self or a bot
 
-        if _self and message.author.bot:
-            return  # ppl dont care about bot deleting its own message
+        settingsCog = self.bot.get_cog("SettingsCommand")
+        if _self and message.author.bot and not settingsCog.isLogBotActionsEnabled(message.guild):
+            return
 
         embed = discord.Embed()
         embed.set_author(name="Message Deleted", icon_url=message.author.display_avatar.url)
@@ -186,7 +194,7 @@ class AuditLogCog(commands.Cog):
 
         if len(message.attachments) != 0:
             attachement1 = message.attachments[0]
-            if attachement1.content_type.startswith("image"):
+            if attachement1 and attachement1.content_type.startswith("image"):
                 embed.set_image(url=attachement1.url)
                 embedDescription += f"\n\n**Message Image:**"
 
@@ -210,7 +218,6 @@ class AuditLogCog(commands.Cog):
             buffer = BytesIO(fileContent.encode('utf-8'))
             file = discord.File(fp=buffer, filename='deleted_message.txt')
 
-        settingsCog = self.bot.get_cog("SettingsCommand")
         if _self:
             await settingsCog.getMsgDeleteChannel(message.guild).send(content=content, embed=embed, file=file)
         else:
@@ -347,6 +354,185 @@ class AuditLogCog(commands.Cog):
 
             settingsCog = self.bot.get_cog("SettingsCommand")
             await settingsCog.getModMsgDeleteChannel(guild).send(content=content, embed=embed, file=file)
+
+    async def handleNickUpdate(self, before: discord.Member, after: discord.Member):
+
+        async for entry in after.guild.audit_logs(limit=1, action=discord.AuditLogAction.member_update):
+            NickBefore = discord.utils.escape_markdown(before.display_name)
+            NickAfter = discord.utils.escape_markdown(after.display_name)
+
+            settingsCog = self.bot.get_cog("SettingsCommand")
+            if entry.user.bot and not settingsCog.isLogBotActionsEnabled(after.guild):
+                return
+
+            embed = discord.Embed()
+            embed.set_author(name="Nickname Update", icon_url=after.display_avatar.url)
+            embed.colour = discord.Colour(0x2F3136)
+
+            if entry.user == after:
+                changed_by = "`Self`"
+            else:
+                changed_by = f"{entry.user.mention}  ({discord.utils.escape_markdown(str(entry.user))})"
+
+            embed.description = f"**Member:** {after.mention}  ({discord.utils.escape_markdown(str(after))})\n" \
+                                f"**Nickname Before:** `{NickBefore}`\n" \
+                                f"**Nickname After:** `{NickAfter}`\n" \
+                                f"**Changed By:** {changed_by}\n"
+
+            await settingsCog.getNickUpdateChannel(after.guild).send(embed=embed)
+
+    async def handleTimeout(self, before: discord.Member, after: discord.Member):
+
+        async for entry in after.guild.audit_logs(limit=1, action=discord.AuditLogAction.member_update):
+
+            settingsCog = self.bot.get_cog("SettingsCommand")
+            if entry.user.bot and not settingsCog.isLogBotActionsEnabled(after.guild):
+                return
+
+            embed = discord.Embed()
+            embed.colour = discord.Colour(0x2F3136)
+
+            if before.is_timed_out() and not after.is_timed_out():
+                """ This is only triggered when a moderator manually removes a timeout. NOT when a timeout expires. """
+
+                embed.set_author(name="Member Timeout Remove", icon_url=after.display_avatar.url)
+
+                if entry.user == after:
+                    timed_out_by = "`Self`"
+                else:
+                    timed_out_by = f"{entry.user.mention}  ({discord.utils.escape_markdown(str(entry.user))})"
+
+                embed.description = f"**Member:** {after.mention}  ({discord.utils.escape_markdown(str(after))})\n" \
+                                    f"**Removed By:** {timed_out_by}\n"
+
+            else:
+                embed.set_author(name="Member Timeout Add", icon_url=after.display_avatar.url)
+                embed.colour = discord.Colour(0x2F3136)
+
+                if entry.user == after:
+                    timed_out_by = "`Self`"
+                else:
+                    timed_out_by = f"{entry.user.mention}  ({discord.utils.escape_markdown(str(entry.user))})"
+
+                if entry.reason:
+                    reason = entry.reason.replace('`', '')
+                else:
+                    reason = "None"
+
+                embed.description = f"**Member:** {after.mention}  ({discord.utils.escape_markdown(str(after))})\n" \
+                                    f"**Timed Out Until:** {discord.utils.format_dt(after.timed_out_until)}\n" \
+                                    f"**Reason:** `{reason}`\n" \
+                                    f"**Timed Out By:** {timed_out_by}\n"
+
+            await settingsCog.getMemberTimeoutChannel(after.guild).send(embed=embed)
+
+    async def handleRoleUpdate(self, before: discord.Member, after: discord.Member):
+        roles_gained = []
+        for role in after.roles:
+            if role not in before.roles:
+                roles_gained.append(role)
+
+        roles_lost = []
+        for role in before.roles:
+            if role not in after.roles:
+                roles_lost.append(role)
+
+        async for entry in after.guild.audit_logs(limit=1, action=discord.AuditLogAction.member_role_update):
+            # entry_created = entry.created_at
+            # roles_before = entry.changes.before.roles
+            # roles_after = entry.changes.after.roles
+            #
+            # print(roles_before)
+            # print(roles_after)
+            #
+            # # if time - entry_created < timedelta(seconds=1):
+            # #     updated_by = entry.user
+
+            settingsCog = self.bot.get_cog("SettingsCommand")
+            if entry.user.bot and not settingsCog.isLogBotActionsEnabled(after.guild):
+                return
+
+            change_list = ""
+            if roles_gained:
+                suffix = "s"
+                if len(roles_gained) == 1:
+                    suffix = ""
+                change_list += (f"**Role{suffix} Gained ({len(roles_gained)}):**\n")
+
+            for role in roles_gained:
+
+                if role.is_premium_subscriber() or role.is_bot_managed():
+                    given_by = "Discord"
+                elif role.is_integration():
+                    given_by = "An Integration"
+                else:
+                    given_by = f"{entry.user.mention} ({discord.utils.escape_markdown(str(entry.user))})"
+
+                change_list += (f"<:tick:873224615881748523> {role.mention} (Name: {role.name}) | Given by {given_by}\n")
+
+            if roles_lost:
+                suffix = "s"
+                if len(roles_lost) == 1:
+                    suffix = ""
+                change_list += (f"**Role{suffix} Lost ({len(roles_lost)}):**\n")
+
+            for role in roles_lost:
+
+                if role.is_premium_subscriber() or role.is_bot_managed():
+                    removed_by = "Discord"
+                elif role.is_integration():
+                    removed_by = "An Integration"
+                else:
+                    removed_by = f"{entry.user.mention} ({discord.utils.escape_markdown(str(entry.user))})"
+
+                change_list += (f"<:cross:872834807476924506> {role.mention} (Name: {role.name}) | Removed by {removed_by}\n")
+
+            embed = discord.Embed()
+            embed.set_author(name="Role Update", icon_url=after.display_avatar.url)
+            embed.colour = discord.Colour(0x2F3136)
+
+            embed.description = f"**Member:** {after.mention}  ({discord.utils.escape_markdown(str(after))})\n" \
+                                f"{change_list}"
+
+            await settingsCog.getRoleUpdateChannel(after.guild).send(embed=embed)
+
+    async def handleRoleDelete(self, role: discord.Role):
+        self.bot.delete_role_cache[str(role.id)] = []
+        await asyncio.sleep(2)
+
+        async for entry in role.guild.audit_logs(limit=1, action=discord.AuditLogAction.role_delete):
+            deleter = entry.user
+
+            # a role getting deleted is significant enough to get logged - even if deleted by a bot
+
+            members = self.bot.delete_role_cache[str(role.id)]
+
+            embed = discord.Embed()
+            embed.set_author(name="Role Delete", icon_url=deleter.display_avatar.url)
+            embed.colour = discord.Colour(0x2F3136)
+
+            msg = ""
+            file_msg = ""
+            for mem in members:
+                mem_A = await self.bot.get_or_fetch_member(role.guild, mem)
+                msg += f" - {mem_A.mention} ({mem_A})\n"
+                file_msg += f" - {mem_A}\n"
+            embed.description = f"Role **{role.name}** was deleted by {deleter.mention} ({deleter}).\n\n" \
+                                f"**Members That Lost Role ({len(members)}):**\n{msg}"
+
+            file = None
+            content = None
+            if len(embed.description) > 4096 or len(embed) > 6000:
+                # attach as a file
+                embed = None
+                content = "**Role Delete!**"
+                fileContent = f"Role {role.name} was deleted by {deleter}.\n\n" \
+                              f"Members That Lost Role ({len(members)}):\n{file_msg}"
+                buffer = BytesIO(fileContent.encode('utf-8'))
+                file = discord.File(fp=buffer, filename='role_delete.txt')
+
+            settingsCog = self.bot.get_cog("SettingsCommand")
+            await settingsCog.getRoleUpdateChannel(role.guild).send(content=content, embed=embed, file=file)
 
 
 async def setup(bot):
