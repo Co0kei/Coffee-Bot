@@ -25,13 +25,13 @@ class JoinLeaveCog(commands.Cog):
         # while not guild.chunked:
         #     log.info(f"Chunking guild {guild.name}")
         #     await asyncio.sleep(1)
-        
+
         member_count = await self.bot.get_or_fetch_member_count(guild)
         log.info(f'I have been invited to {guild.name} ({guild.id}) which has {member_count:,} members.')
         e = discord.Embed(colour=0x53dda4, title='New Guild')  # green colour
 
         if guild.me.guild_permissions.view_audit_log:
-            async for entry in guild.audit_logs(limit=2, action=discord.AuditLogAction.bot_add):
+            async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.bot_add):
                 inviter = entry.user
                 target = entry.target
 
