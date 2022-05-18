@@ -137,7 +137,11 @@ class VoteCommand(commands.Cog):
             for button in buttons:
                 if not button.url:
                     self.remove_item(button)
-            await self.message.edit(view=self)
+
+            try:
+                await self.message.edit(view=self)
+            except (discord.NotFound, discord.HTTPException):
+                pass
 
         async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
             log.exception(error)

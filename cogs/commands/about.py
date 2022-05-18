@@ -96,7 +96,10 @@ class AboutCommand(commands.Cog):
             self.commandsCog = commandsCog
 
         async def on_timeout(self) -> None:
-            await self.message.edit(view=None)
+            try:
+                await self.message.edit(view=None)
+            except (discord.NotFound, discord.HTTPException):
+                pass
 
         async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item) -> None:
             log.exception(error)
