@@ -447,99 +447,220 @@ class AuditLogCog(commands.Cog):
 
         settingsCog = self.bot.get_cog("SettingsCommand")
 
+        # parallel lists - store roles before, roles after and role user (give/remover) for the last 10 audit log entries
+        audit_log_roles_before = []
+        audit_log_roles_after = []
+        audit_log_user = []
+
         async for entry in after.guild.audit_logs(limit=10, action=discord.AuditLogAction.member_role_update, oldest_first=False):
             roles_before = entry.changes.before.roles
             roles_after = entry.changes.after.roles
-            # print(roles_before)
-            # print(roles_after)
+            user = entry.user
 
-            if roles_after == roles_gained and roles_before == roles_lost:
+            audit_log_roles_before.append(roles_before)
+            audit_log_roles_after.append(roles_after)
+            audit_log_user.append(user)
 
-                if entry.user.bot and not settingsCog.isLogBotActionsEnabled(after.guild):
-                    return
+        # print(audit_log_roles_before)
+        # print(audit_log_roles_after)
+        # print(audit_log_user)
 
-                change_list = ""
-                if roles_gained:
-                    suffix = "s"
-                    if len(roles_gained) == 1:
-                        suffix = ""
-                    change_list += (f"**Role{suffix} Gained ({len(roles_gained)}):**\n")
+        log_bot_actions: bool = settingsCog.isLogBotActionsEnabled(after.guild)
 
-                for role in roles_gained:
+        change_list = ""
 
-                    if role.is_premium_subscriber() or role.is_bot_managed():
-                        given_by = "Discord"
-                    elif role.is_integration():
-                        given_by = "An Integration"
+        on_first_role: bool = True
+        for role in roles_gained:
+
+            if role.is_premium_subscriber() or role.is_bot_managed() or role.id == 803221531546615840:
+                given_by = "Discord"
+            elif role.is_integration() or role.id == 786670642769821767:
+                given_by = "An Integration"
+                # Integrations are basically bots
+                if not log_bot_actions:
+                    continue
+            else:
+
+                given_by = None
+                # print(f"finding who gave role: {role.name}")
+                # loop through audit log
+                for item in range(len(audit_log_user)):
+                    roles_before = audit_log_roles_before[item]
+                    roles_after = audit_log_roles_after[item]
+                    user = audit_log_user[item]
+
+                    # print(roles_before)
+                    # print(roles_after)
+                    # print(user)
+                    #
+                    # print(roles_lost)
+                    # print(roles_gained)
+
+                    # Check before and after equal
+                    passed_before = True
+                    if len(roles_after) == len(roles_gained):
+                        roles_gained_id = [__item.id for __item in roles_gained]
+
+                        for _item in roles_after:
+                            if _item.id not in roles_gained_id:
+                                passed_before = False
                     else:
-                        given_by = f"{entry.user.mention} ({discord.utils.escape_markdown(str(entry.user))})"
+                        passed_before = False
 
-                    change_list += (f"<:tick:873224615881748523> {role.mention} (Name: {role.name}) | Given by {given_by}\n")
+                    passed_after = True
+                    if len(roles_before) == len(roles_lost):
+                        roles_lost_id = [__item.id for __item in roles_lost]
 
-                if roles_lost:
-                    suffix = "s"
-                    if len(roles_lost) == 1:
-                        suffix = ""
-                    change_list += (f"**Role{suffix} Lost ({len(roles_lost)}):**\n")
-
-                for role in roles_lost:
-
-                    if role.is_premium_subscriber() or role.is_bot_managed():
-                        removed_by = "Discord"
-                    elif role.is_integration():
-                        removed_by = "An Integration"
+                        for _item in roles_before:
+                            if _item.id not in roles_lost_id:
+                                passed_after = False
                     else:
-                        removed_by = f"{entry.user.mention} ({discord.utils.escape_markdown(str(entry.user))})"
+                        passed_after = False
 
-                    change_list += (f"<:cross:872834807476924506> {role.mention} (Name: {role.name}) | Removed by {removed_by}\n")
+                    if passed_before and passed_after:
+                        given_by = user
+                        break
 
-                embed = discord.Embed()
-                embed.set_author(name="Role Update", icon_url=after.display_avatar.url)
-                embed.colour = discord.Colour(0x2F3136)
+                if given_by:
+                    if given_by.bot and not log_bot_actions:
+                        # print("Moving onto next role as dont log bot actions")
+                        continue  # move onto next role - dont log this as bot.
+                    else:
+                        given_by = f"{given_by.mention} ({discord.utils.escape_markdown(str(given_by))})"
+                else:
+                    given_by = "Unknown"
 
-                embed.description = f"**Member:** {after.mention}  ({discord.utils.escape_markdown(str(after))})\n" \
-                                    f"{change_list}"
+            if on_first_role:
+                suffix = "s"
+                if len(roles_gained) == 1:
+                    suffix = ""
+                change_list += (f"**Role{suffix} Gained ({len(roles_gained)}):**\n")
 
-                await settingsCog.getRoleUpdateChannel(after.guild).send(embed=embed)
-                return
+            on_first_role = False
+
+            change_list += (f"<:tick:873224615881748523> {role.mention} (Name: {role.name}) | Given by {given_by}\n")
+
+        on_first_role: bool = True
+        for role in roles_lost:
+
+            if role.is_premium_subscriber() or role.is_bot_managed() or role.id == 803221531546615840:
+                removed_by = "Discord"
+            elif role.is_integration() or role.id == 786670642769821767:
+                removed_by = "An Integration"
+                # Integrations are basically bots
+                if not log_bot_actions:
+                    continue
+            else:
+
+                removed_by = None
+                # print(f"finding who removed role: {role.name}")
+
+                # loop through audit log
+                for item in range(len(audit_log_user)):
+                    roles_before = audit_log_roles_before[item]
+                    roles_after = audit_log_roles_after[item]
+                    user = audit_log_user[item]
+
+                    # print(roles_before)
+                    # print(roles_after)
+                    # print(user)
+
+                    # Check before and after equal
+                    passed_before = True
+                    if len(roles_after) == len(roles_gained):
+                        roles_gained_id = [__item.id for __item in roles_gained]
+
+                        for _item in roles_after:
+                            if _item.id not in roles_gained_id:
+                                passed_before = False
+                    else:
+                        passed_before = False
+
+                    passed_after = True
+                    if len(roles_before) == len(roles_lost):
+                        roles_lost_id = [__item.id for __item in roles_lost]
+
+                        for _item in roles_before:
+                            if _item.id not in roles_lost_id:
+                                passed_after = False
+                    else:
+                        passed_after = False
+
+                    if passed_before and passed_after:
+                        # if roles_after == roles_gained and roles_before == roles_lost:
+                        removed_by = user
+                        break
+
+                if removed_by:
+                    if removed_by.bot and not log_bot_actions:
+                        # print("Moving onto next role as dont log bot actions")
+                        continue  # move onto next role - dont log this as bot.
+                    else:
+                        removed_by = f"{removed_by.mention} ({discord.utils.escape_markdown(str(removed_by))})"
+                else:
+                    removed_by = "Unknown"
+
+            if on_first_role:
+                suffix = "s"
+                if len(roles_lost) == 1:
+                    suffix = ""
+                change_list += (f"**Role{suffix} Lost ({len(roles_lost)}):**\n")
+
+            on_first_role = False
+
+            change_list += (f"<:cross:872834807476924506> {role.mention} (Name: {role.name}) | Removed by {removed_by}\n")
+
+        if change_list == "":
+            return
+
+        embed = discord.Embed()
+        embed.set_author(name="Role Update", icon_url=after.display_avatar.url)
+        embed.colour = discord.Colour(0x2F3136)
+
+        embed.description = f"**Member:** {after.mention}  ({discord.utils.escape_markdown(str(after))})\n" \
+                            f"{change_list}"
+
+        await settingsCog.getRoleUpdateChannel(after.guild).send(embed=embed)
 
     async def handleRoleDelete(self, role: discord.Role):
         self.bot.delete_role_cache[str(role.id)] = []
         await asyncio.sleep(2)
 
-        async for entry in role.guild.audit_logs(limit=1, action=discord.AuditLogAction.role_delete):
-            deleter = entry.user
+        async for entry in role.guild.audit_logs(limit=3, action=discord.AuditLogAction.role_delete, oldest_first=False):
+            if entry.target.id == role.id:
+                deleter = entry.user
 
-            # a role getting deleted is significant enough to get logged - even if deleted by a bot
+                # a role getting deleted is significant enough to get logged - even if deleted by a bot
 
-            members = self.bot.delete_role_cache[str(role.id)]
+                members = self.bot.delete_role_cache[str(role.id)]
 
-            embed = discord.Embed()
-            embed.set_author(name="Role Delete", icon_url=deleter.display_avatar.url)
-            embed.colour = discord.Colour(0x2F3136)
+                embed = discord.Embed()
+                embed.set_author(name="Role Delete", icon_url=deleter.display_avatar.url)
+                embed.colour = discord.Colour(0x2F3136)
 
-            msg = ""
-            file_msg = ""
-            for mem in members:
-                mem_A = await self.bot.get_or_fetch_member(role.guild, mem)
-                msg += f" - {mem_A.mention} ({mem_A})\n"
-                file_msg += f" - {mem_A}\n"
-            embed.description = f"Role **{role.name}** was deleted by {deleter.mention} ({deleter}).\n\n" \
-                                f"**Members That Lost Role ({len(members)}):**\n{msg}"
+                msg = ""
+                file_msg = ""
+                for mem in members:
+                    mem_A = await self.bot.get_or_fetch_member(role.guild, mem)
+                    msg += f" - {mem_A.mention} ({mem_A})\n"
+                    file_msg += f" - {mem_A}\n"
+                embed.description = f"Role **{role.name}** was deleted by {deleter.mention} ({deleter}).\n\n" \
+                                    f"**Members That Lost Role ({len(members)}):**\n{msg}"
 
-            file = None
-            content = None
-            if len(embed.description) > 4096 or len(embed) > 6000:
-                # attach as a file
-                embed = None
-                content = "**Role Delete!**"
-                fileContent = f"Role {role.name} was deleted by {deleter}.\n\n" \
-                              f"Members That Lost Role ({len(members)}):\n{file_msg}"
-                buffer = BytesIO(fileContent.encode('utf-8'))
-                file = discord.File(fp=buffer, filename='role_delete.txt')
+                file = None
+                content = None
+                if len(embed.description) > 4096 or len(embed) > 6000:
+                    # attach as a file
+                    embed = None
+                    content = "**Role Delete!**"
+                    fileContent = f"Role {role.name} was deleted by {deleter}.\n\n" \
+                                  f"Members That Lost Role ({len(members)}):\n{file_msg}"
+                    buffer = BytesIO(fileContent.encode('utf-8'))
+                    file = discord.File(fp=buffer, filename='role_delete.txt')
 
-            settingsCog = self.bot.get_cog("SettingsCommand")
-            await settingsCog.getRoleUpdateChannel(role.guild).send(content=content, embed=embed, file=file)
+                settingsCog = self.bot.get_cog("SettingsCommand")
+                await settingsCog.getRoleUpdateChannel(role.guild).send(content=content, embed=embed, file=file)
+                return
 
 
 async def setup(bot):
