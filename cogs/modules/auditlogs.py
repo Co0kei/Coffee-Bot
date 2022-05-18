@@ -82,9 +82,17 @@ class AuditLogCog(commands.Cog):
         embed.colour = discord.Colour(0x2F3136)
 
         if message.content:
-            content_after = message.clean_content.replace("`", "")
+            content_after = message.clean_content.replace("`", "")  # remove so no messed up format
         else:
             content_after = "None"
+            if message.embeds:
+                embed_ = message.embeds[0]
+                if embed_:
+                    content = f"{embed_.author.name or ''}\n{embed_.title or ''}\n{embed_.description or ''}\n"
+                    for field in getattr(embed_, '_fields', []):
+                        content += f"\n{field['name']}\n{field['value']}\n"
+                    content += f"\n{embed_.footer.text or ''}"
+                    content_after = content.replace("`", "")
 
         embed.description = f'**Message\'s Info:**\n' \
                             f'Message Author: {message.author.mention} ({message.author})\n' \
@@ -182,6 +190,14 @@ class AuditLogCog(commands.Cog):
             content = message.clean_content.replace("`", "")  # remove so no messed up format
         else:
             content = "None"
+            if message.embeds:
+                embed_ = message.embeds[0]
+                if embed_:
+                    content = f"{embed_.author.name or ''}\n{embed_.title or ''}\n{embed_.description or ''}\n"
+                    for field in getattr(embed_, '_fields', []):
+                        content += f"\n{field['name']}\n{field['value']}\n"
+                    content += f"\n{embed_.footer.text or ''}"
+                    content = content.replace("`", "")
 
         embedDescription = f'**Message\'s Info:**\n' \
                            f'Message Author: {message.author.mention} ({message.author})\n' \
@@ -189,12 +205,13 @@ class AuditLogCog(commands.Cog):
                            f'Channel: {message.channel.mention}\n' \
                            f'Created: {discord.utils.format_dt(message.created_at, "F")} ({discord.utils.format_dt(message.created_at, "R")})\n' \
                            f'Message ID: `{message.id}`\n' \
-                           f'Attachments: `{len(message.attachments)}`' \
+                           f'Attachments: `{len(message.attachments)}`\n' \
+                           f'Stickers: `{len(message.stickers)}`' \
                            f'\n\n**Message Content:**\n`{content}`'
 
         if len(message.attachments) != 0:
             attachement1 = message.attachments[0]
-            if attachement1 and attachement1.content_type.startswith("image"):
+            if attachement1 and attachement1.content_type and attachement1.content_type.startswith("image"):
                 embed.set_image(url=attachement1.url)
                 embedDescription += f"\n\n**Message Image:**"
 
@@ -260,7 +277,7 @@ class AuditLogCog(commands.Cog):
                     break
             # otherwise message deleted by self or a bot
 
-        # NO WAY TO GET MEMBER. so idk if bot. so cant return here
+        # NO WAY TO GET AUTHOR. so idk if bot. so cant return here
 
         embed = discord.Embed()
         embed.set_author(name="Message Deleted")  # , icon_url=message.author.display_avatar.url)
