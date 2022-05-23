@@ -27,7 +27,7 @@ class AuditLogCog(commands.Cog):
         content_after = after.clean_content.replace("`", "")
 
         embed.description = f'**Message\'s Info:**\n' \
-                            f'Message Author: {after.author.mention} ({after.author})\n' \
+                            f'Message Author: {after.author.mention} ({discord.utils.escape_markdown(str(after.author))})\n' \
                             f'Channel: {after.channel.mention}\n' \
                             f'Created: {discord.utils.format_dt(after.created_at, "F")} ({discord.utils.format_dt(after.created_at, "R")})\n' \
                             f'Message ID: `{after.id}`\n' \
@@ -95,7 +95,7 @@ class AuditLogCog(commands.Cog):
                     content_after = content.replace("`", "")
 
         embed.description = f'**Message\'s Info:**\n' \
-                            f'Message Author: {message.author.mention} ({message.author})\n' \
+                            f'Message Author: {message.author.mention} ({discord.utils.escape_markdown(str(message.author))})\n' \
                             f'Channel: {message.channel.mention}\n' \
                             f'Created: {discord.utils.format_dt(message.created_at, "F")} ({discord.utils.format_dt(message.created_at, "R")})\n' \
                             f'Message ID: `{message.id}`\n' \
@@ -141,6 +141,7 @@ class AuditLogCog(commands.Cog):
 
         # self.bot.delete_log_cache is a map of audit log id to COUNT OF DELETED MESSAGEs
         message_deleter = "`Self or a Bot`"
+        message_deleter_for_file = "Self or a Bot"
         _self = True
         async for entry in message.guild.audit_logs(limit=10, action=discord.AuditLogAction.message_delete):
             entry_id = entry.id
@@ -154,7 +155,8 @@ class AuditLogCog(commands.Cog):
                 # If same author channel AND created within last seconds, we have 100% found deleter.
                 # This is when a human moderator deletes another human or bots message
                 self.bot.delete_log_cache[entry_id] = entry_count  # Cache it
-                message_deleter = f"{entry_deleter.mention} ({entry_deleter})"
+                message_deleter = f"{entry_deleter.mention} ({discord.utils.escape_markdown(str(entry_deleter))})"
+                message_deleter_for_file = f"{entry_deleter}"
                 _self = False
                 break
 
@@ -173,7 +175,8 @@ class AuditLogCog(commands.Cog):
                 if entry_count > cached_count and author == entry_victim and channel == entry_channel:
                     # If count has gone up AND correct author/channel, we have 100% found deleter.
                     self.bot.delete_log_cache[entry_id] = entry_count  # update cache
-                    message_deleter = f"{entry_deleter.mention} ({entry_deleter})"
+                    message_deleter = f"{entry_deleter.mention} ({discord.utils.escape_markdown(str(entry_deleter))})"
+                    message_deleter_for_file = f"{entry_deleter}"
                     _self = False
                     break
             # otherwise message deleted by self or a bot
@@ -225,11 +228,12 @@ class AuditLogCog(commands.Cog):
             content = "**Message Delete!**"
             fileContent = \
                 f'Message Author: {message.author}\n' \
-                f'Deleted By: {message_deleter.replace("`", "")}\n' \
+                f'Deleted By: {message_deleter_for_file}\n' \
                 f'Channel: #{message.channel}\n' \
                 f'Created (UTC): {message.created_at.strftime("%Y-%m-%d %H:%M-%S")}\n' \
                 f'Message ID: {message.id}\n' \
-                f'Attachments: {len(message.attachments)}' \
+                f'Attachments: {len(message.attachments)}\n' \
+                f'Stickers: {len(message.stickers)}' \
                 f'\n\nMessage Content:\n{message.clean_content}'
 
             buffer = BytesIO(fileContent.encode('utf-8'))
@@ -262,7 +266,7 @@ class AuditLogCog(commands.Cog):
 
             if channel == entry_channel and time - entry_created < timedelta(seconds=1):
                 self.bot.delete_log_cache[entry_id] = entry_count  # Cache it
-                message_deleter = f"{entry_deleter.mention} ({entry_deleter})"
+                message_deleter = f"{entry_deleter.mention} ({discord.utils.escape_markdown(str(entry_deleter))})"
                 _self = False
                 break
 
@@ -276,7 +280,7 @@ class AuditLogCog(commands.Cog):
 
                 if entry_count > cached_count and channel == entry_channel:
                     self.bot.delete_log_cache[entry_id] = entry_count  # update cache
-                    message_deleter = f"{entry_deleter.mention} ({entry_deleter})"
+                    message_deleter = f"{entry_deleter.mention} ({discord.utils.escape_markdown(str(entry_deleter))})"
                     _self = False
                     break
             # otherwise message deleted by self or a bot
@@ -383,8 +387,8 @@ class AuditLogCog(commands.Cog):
     async def handleNickUpdate(self, before: discord.Member, after: discord.Member):
 
         async for entry in after.guild.audit_logs(limit=1, action=discord.AuditLogAction.member_update):
-            NickBefore = discord.utils.escape_markdown(before.display_name)
-            NickAfter = discord.utils.escape_markdown(after.display_name)
+            # // NickBefore = discord.utils.escape_markdown()
+            # //NickAfter = discord.utils.escape_markdown()
 
             settingsCog = self.bot.get_cog("SettingsCommand")
             if entry.user.bot and not settingsCog.isLogBotActionsEnabled(after.guild):
@@ -400,8 +404,8 @@ class AuditLogCog(commands.Cog):
                 changed_by = f"{entry.user.mention}  ({discord.utils.escape_markdown(str(entry.user))})"
 
             embed.description = f"**Member:** {after.mention}  ({discord.utils.escape_markdown(str(after))})\n" \
-                                f"**Nickname Before:** `{NickBefore}`\n" \
-                                f"**Nickname After:** `{NickAfter}`\n" \
+                                f"**Nickname Before:** `{before.display_name}`\n" \
+                                f"**Nickname After:** `{after.display_name}`\n" \
                                 f"**Changed By:** {changed_by}\n"
 
             await settingsCog.getNickUpdateChannel(after.guild).send(embed=embed)
@@ -650,9 +654,9 @@ class AuditLogCog(commands.Cog):
                 file_msg = ""
                 for mem in members:
                     mem_A = await self.bot.get_or_fetch_member(role.guild, mem)
-                    msg += f" - {mem_A.mention} ({mem_A})\n"
+                    msg += f" - {mem_A.mention} ({discord.utils.escape_markdown(str(mem_A))})\n"
                     file_msg += f" - {mem_A}\n"
-                embed.description = f"Role **{role.name}** was deleted by {deleter.mention} ({deleter}).\n\n" \
+                embed.description = f"Role **{role.name}** was deleted by {deleter.mention} ({discord.utils.escape_markdown(str(deleter))}).\n\n" \
                                     f"**Members That Lost Role ({len(members)}):**\n{msg}"
 
                 file = None
