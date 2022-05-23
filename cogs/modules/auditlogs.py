@@ -236,9 +236,13 @@ class AuditLogCog(commands.Cog):
             file = discord.File(fp=buffer, filename='deleted_message.txt')
 
         if _self:
-            await settingsCog.getMsgDeleteChannel(message.guild).send(content=content, embed=embed, file=file)
+            channel: discord.TextChannel = settingsCog.getMsgDeleteChannel(message.guild)
+            if channel:
+                await channel.send(content=content, embed=embed, file=file)
         else:
-            await settingsCog.getModMsgDeleteChannel(message.guild).send(content=content, embed=embed, file=file)
+            channel: discord.TextChannel = settingsCog.getModMsgDeleteChannel(message.guild)
+            if channel:
+                await channel.send(content=content, embed=embed, file=file)
 
     async def handleRawDelete(self, payload: discord.RawMessageDeleteEvent, guild: discord.Guild):  # DONE
         """ Message is unknown"""
@@ -290,9 +294,13 @@ class AuditLogCog(commands.Cog):
 
         settingsCog = self.bot.get_cog("SettingsCommand")
         if _self:
-            await settingsCog.getMsgDeleteChannel(guild).send(embed=embed)
+            channel: discord.TextChannel = settingsCog.getMsgDeleteChannel(guild)
+            if channel:
+                await channel.send(embed=embed)
         else:
-            await settingsCog.getModMsgDeleteChannel(guild).send(embed=embed)
+            channel: discord.TextChannel = settingsCog.getModMsgDeleteChannel(guild)
+            if channel:
+                await channel.send(embed=embed)
 
     async def handleRawBulkDelete(self, payload: discord.RawBulkMessageDeleteEvent, guild: discord.Guild):  # DONE
         """ Some messages can be unknown """
