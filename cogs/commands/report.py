@@ -328,10 +328,25 @@ class ReportCommand(commands.Cog):
 
         split_description = embed.description.split("\n")
 
-        if "false" in split_description[-1] or "handled" in split_description[-1]:
-            split_description = split_description[:-1]
-            split_description.append(f"{interaction.user.mention} ({discord.utils.escape_markdown(str(interaction.user))}) reset the report state.")
-            embed.description = "\n".join(split_description)
+        reset_msg = f"{interaction.user.mention} ({discord.utils.escape_markdown(str(interaction.user))}) reset the report state."
+
+        if "false" in split_description[-1] or "handled" in split_description[-1] or "Message Image:" in split_description[-1]:
+
+            if "Message Image:" in split_description[-1]:
+
+                # if message contains image
+                if "false" in split_description[-3] or "handled" in split_description[-3]:
+                    # Remove previos message and empty line
+                    split_description.pop(len(split_description) - 3)
+                    split_description.insert(len(split_description) - 2, reset_msg)
+                    embed.description = "\n".join(split_description)
+                else:
+                    return await interaction.response.send_message("This report has not been marked as handled or false yet.", ephemeral=True)
+            else:
+                #remove previous message and add new one
+                split_description = split_description[:-1]
+                split_description.append(reset_msg)
+                embed.description = "\n".join(split_description)
 
             embed.colour = discord.Colour.dark_theme()
 
@@ -369,7 +384,22 @@ class ReportCommand(commands.Cog):
                     embed.description = "\n".join(split_description)
                 #
 
-                embed.description += f"\n\n<:tick:873224615881748523> {interaction.user.mention} ({discord.utils.escape_markdown(str(interaction.user))}) marked this report as handled."
+                handled_msg = f"<:tick:873224615881748523> {interaction.user.mention} ({discord.utils.escape_markdown(str(interaction.user))}) marked this report as handled."
+                if "Message Image:" in split_description[-1]:
+
+                    # remove reset message
+                    if "reset" in split_description[-3]:
+                        split_description.pop(len(split_description) -3)
+                        split_description.pop(len(split_description) - 3)
+                    #
+
+                    #add before the message image section
+                    split_description.insert(len(split_description) - 1, f"{handled_msg}\n")
+                    embed.description = "\n".join(split_description)
+                else:
+                    #append to end
+                    embed.description += f"\n\n{handled_msg}"
+
                 embed.colour = discord.Colour.green()
 
                 await interaction.response.edit_message(embed=embed, view=view)
@@ -389,7 +419,21 @@ class ReportCommand(commands.Cog):
                     embed.description = "\n".join(split_description)
                 #
 
-                embed.description += f"\n\n<:cross:872834807476924506> {interaction.user.mention} ({discord.utils.escape_markdown(str(interaction.user))}) marked this as a false report."
+                handled_msg = f"<:cross:872834807476924506> {interaction.user.mention} ({discord.utils.escape_markdown(str(interaction.user))}) marked this as a false report."
+                if "Message Image:" in split_description[-1]:
+
+                    # remove reset message
+                    if "reset" in split_description[-3]:
+                        split_description.pop(len(split_description) -3)
+                        split_description.pop(len(split_description) - 3)
+
+                    #add before the message image section
+                    split_description.insert(len(split_description) - 1, f"{handled_msg}\n")
+                    embed.description = "\n".join(split_description)
+                else:
+                    #append to end
+                    embed.description += f"\n\n{handled_msg}"
+
                 embed.colour = discord.Colour.dark_red()
 
                 await interaction.response.edit_message(embed=embed, view=view)
