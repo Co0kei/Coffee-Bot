@@ -188,6 +188,10 @@ class ReportCommand(commands.Cog):
                 else:
                     content = f"{self.settingsCog.getReportsAlertRole(interaction.guild).mention}"
 
+            #view: discord.ui.View = discord.ui.View()
+            view.add_item(discord.ui.Button(label="Actioned", custom_id="Actioned", style=discord.ButtonStyle.green))
+            view.add_item(discord.ui.Button(label="False Positive", custom_id="False Positive", style=discord.ButtonStyle.red))
+
             await self.settingsCog.getReportsChannel(interaction.guild).send(
                 content=content, embed=embed, view=view, file=file,
                 allowed_mentions=discord.AllowedMentions(roles=True))
@@ -291,9 +295,62 @@ class ReportCommand(commands.Cog):
             else:
                 content = None
 
+            view: discord.ui.View = discord.ui.View()
+            view.add_item(discord.ui.Button(label="Actioned", custom_id="Actioned", style=discord.ButtonStyle.green))
+            view.add_item(discord.ui.Button(label="False Positive", custom_id="False Positive", style=discord.ButtonStyle.red))
+
             await self.settingsCog.getReportsChannel(interaction.guild).send(
-                content=content, embed=embed,
+                content=content, embed=embed, view=view,
                 allowed_mentions=discord.AllowedMentions(roles=True))
+
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        # Listen for button interactions
+        if interaction.type == discord.InteractionType.component:
+
+            button = interaction.data["custom_id"]
+            msg = interaction.message
+
+            if button == "Actioned":
+                view: discord.ui.View = discord.ui.View.from_message(msg)
+                for button in view.children:
+                    if not button.url:
+                        button.disabled = True
+
+                embed: discord.Embed = msg.embeds[0]
+
+                # remove reset message
+                split_description = embed.description.split("\n")
+                if "reset" in split_description[-1]:
+                    split_description = split_description[:-2]
+                    embed.description = "\n".join(split_description)
+                #
+
+                embed.description += f"\n\n<:tick:873224615881748523> {interaction.user.mention} ({discord.utils.escape_markdown(str(interaction.user))}) marked this report as handled."
+                embed.colour = discord.Colour.green()
+
+                await interaction.response.edit_message(embed=embed, view=view)
+
+            elif button == "False Positive":
+                view: discord.ui.View = discord.ui.View.from_message(msg)
+                for button in view.children:
+                    if not button.url:
+                        button.disabled = True
+
+                embed: discord.Embed = msg.embeds[0]
+
+                # remove reset message
+                split_description = embed.description.split("\n")
+                if "reset" in split_description[-1]:
+                    split_description = split_description[:-2]
+                    embed.description = "\n".join(split_description)
+                #
+
+                embed.description += f"\n\n<:cross:872834807476924506> {interaction.user.mention} ({discord.utils.escape_markdown(str(interaction.user))}) marked this as a false report."
+                embed.colour = discord.Colour.dark_red()
+
+                await interaction.response.edit_message(embed=embed, view=view)
+
 
 
 # get recent messages
