@@ -13,6 +13,9 @@ class MemberUpdateCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role: discord.Role):
+        if role.guild is None:
+            return
+
         settingsCommand = self.bot.get_cog("SettingsCommand")
 
         if settingsCommand.getRoleUpdateChannel(role.guild):

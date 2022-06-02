@@ -638,41 +638,46 @@ class AuditLogCog(commands.Cog):
         self.bot.delete_role_cache[str(role.id)] = []
         await asyncio.sleep(2)
 
-        async for entry in role.guild.audit_logs(limit=3, action=discord.AuditLogAction.role_delete, oldest_first=False):
-            if entry.target.id == role.id:
-                deleter = entry.user
+        try:
 
-                # a role getting deleted is significant enough to get logged - even if deleted by a bot
+            async for entry in role.guild.audit_logs(limit=3, action=discord.AuditLogAction.role_delete, oldest_first=False):
+                if entry.target.id == role.id:
+                    deleter = entry.user
 
-                members = self.bot.delete_role_cache[str(role.id)]
+                    # a role getting deleted is significant enough to get logged - even if deleted by a bot
 
-                embed = discord.Embed()
-                embed.set_author(name="Role Delete", icon_url=deleter.display_avatar.url)
-                embed.colour = discord.Colour(0x2F3136)
+                    members = self.bot.delete_role_cache[str(role.id)]
 
-                msg = ""
-                file_msg = ""
-                for mem in members:
-                    mem_A = await self.bot.get_or_fetch_member(role.guild, mem)
-                    msg += f" - {mem_A.mention} ({discord.utils.escape_markdown(str(mem_A))})\n"
-                    file_msg += f" - {mem_A}\n"
-                embed.description = f"Role **{role.name}** was deleted by {deleter.mention} ({discord.utils.escape_markdown(str(deleter))}).\n\n" \
-                                    f"**Members That Lost Role ({len(members)}):**\n{msg}"
+                    embed = discord.Embed()
+                    embed.set_author(name="Role Delete", icon_url=deleter.display_avatar.url)
+                    embed.colour = discord.Colour(0x2F3136)
 
-                file = None
-                content = None
-                if len(embed.description) > 4096 or len(embed) > 6000:
-                    # attach as a file
-                    embed = None
-                    content = "**Role Delete!**"
-                    fileContent = f"Role {role.name} was deleted by {deleter}.\n\n" \
-                                  f"Members That Lost Role ({len(members)}):\n{file_msg}"
-                    buffer = BytesIO(fileContent.encode('utf-8'))
-                    file = discord.File(fp=buffer, filename='role_delete.txt')
+                    msg = ""
+                    file_msg = ""
+                    for mem in members:
+                        mem_A = await self.bot.get_or_fetch_member(role.guild, mem)
+                        msg += f" - {mem_A.mention} ({discord.utils.escape_markdown(str(mem_A))})\n"
+                        file_msg += f" - {mem_A}\n"
+                    embed.description = f"Role **{role.name}** was deleted by {deleter.mention} ({discord.utils.escape_markdown(str(deleter))}).\n\n" \
+                                        f"**Members That Lost Role ({len(members)}):**\n{msg}"
 
-                settingsCog = self.bot.get_cog("SettingsCommand")
-                await settingsCog.getRoleUpdateChannel(role.guild).send(content=content, embed=embed, file=file)
-                return
+                    file = None
+                    content = None
+                    if len(embed.description) > 4096 or len(embed) > 6000:
+                        # attach as a file
+                        embed = None
+                        content = "**Role Delete!**"
+                        fileContent = f"Role {role.name} was deleted by {deleter}.\n\n" \
+                                      f"Members That Lost Role ({len(members)}):\n{file_msg}"
+                        buffer = BytesIO(fileContent.encode('utf-8'))
+                        file = discord.File(fp=buffer, filename='role_delete.txt')
+
+                    settingsCog = self.bot.get_cog("SettingsCommand")
+                    await settingsCog.getRoleUpdateChannel(role.guild).send(content=content, embed=embed, file=file)
+                    return
+
+        except discord.Forbidden:
+            pass
 
 
 async def setup(bot):
