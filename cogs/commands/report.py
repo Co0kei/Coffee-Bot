@@ -21,9 +21,13 @@ class ReportCommand(commands.Cog):
         self.userContextMenu = app_commands.ContextMenu(name='Report User', callback=self.globalReportUser)
         self.bot.tree.add_command(self.userContextMenu)
 
+        self.resetReportMenu = app_commands.ContextMenu(name='Reset Report', callback=self.resetReport)
+        self.bot.tree.add_command(self.resetReportMenu)
+
     async def cog_unload(self) -> None:
         self.bot.tree.remove_command(self.messageContextMenu.name, type=self.messageContextMenu.type)
         self.bot.tree.remove_command(self.userContextMenu.name, type=self.userContextMenu.type)
+        self.bot.tree.remove_command(self.resetReportMenu.name, type=self.resetReportMenu.type)
 
     # Setup Slash Command & Context Menus
     @app_commands.command(name='report', description='Report a member with a reason for staff to see.')
@@ -40,6 +44,11 @@ class ReportCommand(commands.Cog):
     @app_commands.guild_only()
     async def globalReportUser(self, interaction: discord.Interaction, member: discord.Member):
         await self.handleUserReport(interaction, member, None)
+
+    @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
+    async def resetReport(self, interaction: discord.Interaction, message: discord.Message):
+        await self.reset_report_state(interaction, message)
 
     # Methods
     def getNoReportsChannelEmbed(self) -> discord.Embed:
@@ -302,6 +311,40 @@ class ReportCommand(commands.Cog):
             await self.settingsCog.getReportsChannel(interaction.guild).send(
                 content=content, embed=embed, view=view,
                 allowed_mentions=discord.AllowedMentions(roles=True))
+
+    async def reset_report_state(self, interaction: discord.Interaction, message: discord.Message):
+        """ Context menu command to reset a reports handled state - used by admins if mods mess up """
+
+        if message.author != self.bot.user:
+            return await interaction.response.send_message("This command can only be used on a report.", ephemeral=True)
+
+        if len(message.embeds) != 1:
+            return await interaction.response.send_message("This command can only be used on a report.", ephemeral=True)
+
+        embed = message.embeds[0]
+        if "Report Received" not in embed.author.name:
+            return await interaction.response.send_message("This command can only be used on a report.", ephemeral=True)
+
+
+        split_description = embed.description.split("\n")
+
+        if "false" in split_description[-1] or "handled" in split_description[-1]:
+            split_description = split_description[:-1]
+            split_description.append(f"{interaction.user.mention} ({discord.utils.escape_markdown(str(interaction.user))}) reset the report state.")
+            embed.description = "\n".join(split_description)
+
+            embed.colour = discord.Colour.dark_theme()
+
+            view: discord.ui.View = discord.ui.View.from_message(message)
+            for button in view.children:
+                if not button.url:
+                    button.disabled = False
+
+            await message.edit(embed=embed, view=view)
+            await interaction.response.send_message("This report has been reset.", ephemeral=True)
+
+        else:
+            await interaction.response.send_message("This report has not been marked as handled or false yet.", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
