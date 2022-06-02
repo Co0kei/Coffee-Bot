@@ -24,7 +24,8 @@ class HelpCommand(commands.Cog):
         f'**/help** - Displays help menu.\n'
         f'**Report Message** - Right click a message, scroll to \'Apps\', then click me to report a user.\n'
         f'**Report User** - Right click a user, scroll to \'Apps\', then click me to report a message.\n'
-        f'**/report** - Used to report a user, as mobile devices do not support context menus.\n'
+        f'**Reset Report** - For moderators to reset a report\'s state.\n'
+        f'**/report** - Used to report a user, as not all devices support context menus.\n'
         f'**/settings** - Used to setup the bot in your server.\n'
         f'**/about** - Some stats about the bot.\n'
         f'**/vote** - Shows your voting history.', inline=False)
