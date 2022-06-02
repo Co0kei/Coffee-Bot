@@ -438,7 +438,7 @@ class OwnerCog(commands.Cog):
             if py:
                 shutil.move(".git/cogs", "cogs")
                 shutil.move(".git/bot.py", "bot.py")
-                msg += "Updated files."
+                msg += "Updated files. Don't forget to reload all cogs now!"
             return msg
 
         async with self.lock:
@@ -579,6 +579,12 @@ class OwnerCog(commands.Cog):
 
         global_rate_limit = self.bot.is_ws_ratelimited()  # not self.bot.http._global_over.is_set()
         description.append(f'Global Rate Limit: {global_rate_limit}')
+
+
+        description.append(f'User cache size: {len(self.bot.users)}')
+        description.append(f'Message cache size: {len(self.bot.cached_messages)}')
+        description.append(f'Msg delete cache size: {len(self.bot.delete_log_cache)}')
+        description.append(f'Role delete cache size: {len(self.bot.delete_role_cache)}')
 
         if command_waiters >= 8:
             total_warnings += 1
