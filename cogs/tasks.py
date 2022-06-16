@@ -41,12 +41,12 @@ class TaskCog(commands.Cog):
                         pass
 
     async def check_followup_vote_reminders(self):
-        """ Check if its been longer then 14 hours since someone has voted. This is called every 2 hours """
+        """ Check if its been longer then 16 hours since someone has voted. This is called every 4 hours """
         current_time: int = int(time.time())
         for discord_id, last_vote in self.bot.stat_data["vote_reminders"].items():
             difference = (current_time - last_vote)
             # log.info(f'{discord_id} {last_vote} {difference}')
-            if difference > 50400:  # num of seconds in 14 hours - so reminders send every 2 hours after if you dont vote before that
+            if difference > 57600:  # num of seconds in 16 hours - so reminders send every 4 hours after if you don't vote before that
                 user = await self.bot.get_or_fetch_user(int(discord_id))
                 log.info(f"Attempting to send vote reminder to {user}")
                 if user:
@@ -59,7 +59,7 @@ class TaskCog(commands.Cog):
                     except discord.HTTPException:
                         pass
 
-    @tasks.loop(hours=2)
+    @tasks.loop(hours=4)
     async def vote_reminder(self):
         await self.check_followup_vote_reminders()
 
