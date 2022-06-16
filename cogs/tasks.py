@@ -42,6 +42,9 @@ class TaskCog(commands.Cog):
 
     async def check_followup_vote_reminders(self):
         """ Check if its been longer then 16 hours since someone has voted. This is called every 4 hours """
+
+        to_remove = [] #list of people to remove from reminders
+
         current_time: int = int(time.time())
         for discord_id, last_vote in self.bot.stat_data["vote_reminders"].items():
             difference = (current_time - last_vote)
@@ -51,13 +54,31 @@ class TaskCog(commands.Cog):
                 log.info(f"Attempting to send vote reminder to {user}")
                 if user:
                     try:
-                        await user.send(
-                            f"Hey {user.mention}, you last voted <t:{last_vote}:R>! You can vote again at https://top.gg/bot/950765718209720360/vote ! "
-                            f"(You can disable reminders on the /vote command)",
-                            suppress_embeds=True)
-                        log.info(f'Sent vote reminder to {user}!')
+                        if difference > 259200:
+                            # if its been more than 3 days then say they will no longer receive reminders
+                            await user.send(
+                                f"Hey {user.mention}, you last voted <t:{last_vote}:R>! You can vote again at https://top.gg/bot/950765718209720360/vote ! "
+                                f"You have not voted in over 3 days, so will now stop receiving reminders.",
+                                suppress_embeds=True)
+                            to_remove.append(discord_id)
+                            log.info(f'Sent vote reminder stopping notification to {user}!')
+                        else:
+                            await user.send(
+                                f"Hey {user.mention}, you last voted <t:{last_vote}:R>! You can vote again at https://top.gg/bot/950765718209720360/vote ! "
+                                f"(You can disable reminders on the /vote command)",
+                                suppress_embeds=True)
+                            log.info(f'Sent vote reminder to {user}!')
                     except discord.HTTPException:
-                        pass
+                        # they blocked the bot or no mutual guilds
+                        to_remove.append(discord_id)
+                else:
+                    # they no longer in guild with bot i guess
+                    to_remove.append(discord_id)
+
+        for discord_id in to_remove:
+            del self.bot.stat_data["vote_reminders"][discord_id]
+            log.info(f'Removed {discord_id} from vote reminders.')
+
 
     @tasks.loop(hours=4)
     async def vote_reminder(self):
