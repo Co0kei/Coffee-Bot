@@ -33,7 +33,11 @@ class StatsCog(commands.Cog):
                 """
 
         if self._data_batch:
-            await self.bot.pool.execute(query, self._data_batch)
+
+            async with self.bot.pool.acquire() as connection:
+                async with connection.transaction():
+                    await self.bot.pool.execute(query, self._data_batch)
+
             total = len(self._data_batch)
             if total > 1:
                 log.info('Registered %s commands to the database.', total)
