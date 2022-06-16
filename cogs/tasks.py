@@ -28,7 +28,7 @@ class TaskCog(commands.Cog):
         for discord_id, last_vote in self.bot.stat_data["vote_reminders"].items():
             difference = (current_time - last_vote)
             # log.info(f'{discord_id} {last_vote} {difference}')
-            if 43200 < difference < 43260:  # num of seconds in 12 hours # 0 < difference < 60:  #
+            if 43198 <= difference <= 43262:  # num of seconds in 12 hours # 0 < difference < 60:  #
                 user = await self.bot.get_or_fetch_user(int(discord_id))
                 log.info(f"Attempting to send vote reminder to {user}")
                 if user:
