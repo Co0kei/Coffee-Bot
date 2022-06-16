@@ -290,9 +290,10 @@ class OwnerCog(commands.Cog):
         """ Loads all guild data into memory from postgreSQL"""
         query = "SELECT * FROM guilds;"
 
-        async with self.bot.pool.acquire() as conn:
-            async with conn.transaction():
-                guild_data = await conn.fetch(query)  # This returns a asyncpg.Record object, which is similar to a dict
+        # async with self.bot.pool.acquire() as conn:
+        #     async with conn.transaction():
+
+        guild_data = await self.bot.pool.fetch(query)
 
         guild_settings = {}
 
@@ -566,8 +567,8 @@ class OwnerCog(commands.Cog):
 
         bad_inner_tasks = ", ".join(hex(id(t)) for t in inner_tasks if t.done() and t._exception is not None)
         total_warnings += bool(bad_inner_tasks)
-        embed.add_field(name='Inner Tasks', value=f'Total: {len(inner_tasks)} | {inner_tasks}\nFailed: {bad_inner_tasks or "None"}')
-        embed.add_field(name='Events Waiting', value=f'Total: {len(event_tasks)} | {event_tasks}', inline=False)
+        embed.add_field(name='Inner Tasks', value=f'Total: {len(inner_tasks)}\nFailed: {bad_inner_tasks or "None"}')
+        embed.add_field(name='Events Waiting', value=f'Total: {len(event_tasks)}', inline=False)
 
         command_waiters = len(self.bot.get_cog('StatsCog')._data_batch)
         is_locked = self.bot.get_cog('StatsCog')._batch_lock.locked()
@@ -585,6 +586,10 @@ class OwnerCog(commands.Cog):
         description.append(f'Message cache size: {len(self.bot.cached_messages)}')
         description.append(f'Msg delete cache size: {len(self.bot.delete_log_cache)}')
         description.append(f'Role delete cache size: {len(self.bot.delete_role_cache)}')
+
+        description.append(f"updater Task running: {self.bot.get_cog('TaskCog').updater.is_running()}")
+        description.append(f"vote_reminder Task running: {self.bot.get_cog('TaskCog').vote_reminder.is_running()}")
+
 
         if command_waiters >= 8:
             total_warnings += 1
