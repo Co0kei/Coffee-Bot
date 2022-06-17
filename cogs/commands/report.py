@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from io import BytesIO
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import discord
 from discord import app_commands, ui
@@ -152,6 +152,18 @@ class ReportCommand(commands.Cog):
                                               f'from {self.message.author.mention} ({self.message.author})!')
             embed.set_author(name="Message Report Received", icon_url=interaction.user.display_avatar.url)
             embed.set_thumbnail(url=self.message.author.display_avatar.url)
+
+            if self.message.author.joined_at is None:
+                reportedUserServerJoinTime = "`Unknown`"
+            else:
+                reportedUserServerJoinTime = f'{discord.utils.format_dt(self.message.author.joined_at, "F")} ({discord.utils.format_dt(self.message.author.joined_at, "R")})'
+
+            embed.description +=  f'\n\n**Reported User\'s Info:**\n' \
+                                              f'Discord Tag: `{self.message.author}`\n' \
+                                              f'Discord ID: `{self.message.author.id}`\n' \
+                                              f'Account Created: {discord.utils.format_dt(self.message.author.created_at, "F")} ({discord.utils.format_dt(self.message.author.created_at, "R")})\n' \
+                                              f'Joined Server: {reportedUserServerJoinTime}'
+
             embed.description += f'\n\n**Reported Message\'s Info:**\n' \
                                  f'Message ID: `{self.message.id}`\n' \
                                  f'Channel: {self.message.channel.mention}\n' \
@@ -197,9 +209,11 @@ class ReportCommand(commands.Cog):
                 else:
                     content = f"{self.settingsCog.getReportsAlertRole(interaction.guild).mention}"
 
-            #view: discord.ui.View = discord.ui.View()
-            view.add_item(discord.ui.Button(label="Actioned", custom_id="Actioned", style=discord.ButtonStyle.green))
-            view.add_item(discord.ui.Button(label="False Positive", custom_id="False Positive", style=discord.ButtonStyle.red))
+            if not file:
+                view.add_item(discord.ui.Button(label="Actioned", custom_id="Actioned", style=discord.ButtonStyle.green))
+                view.add_item(discord.ui.Button(label="False Positive", custom_id="False Positive", style=discord.ButtonStyle.red))
+                view.add_item(discord.ui.Button(label="View Message History", custom_id="View Message History",
+                                                style=discord.ButtonStyle.gray))
 
             await self.settingsCog.getReportsChannel(interaction.guild).send(
                 content=content, embed=embed, view=view, file=file,
@@ -307,6 +321,7 @@ class ReportCommand(commands.Cog):
             view: discord.ui.View = discord.ui.View()
             view.add_item(discord.ui.Button(label="Actioned", custom_id="Actioned", style=discord.ButtonStyle.green))
             view.add_item(discord.ui.Button(label="False Positive", custom_id="False Positive", style=discord.ButtonStyle.red))
+            view.add_item(discord.ui.Button(label="View Message History", custom_id="View Message History", style=discord.ButtonStyle.gray))
 
             await self.settingsCog.getReportsChannel(interaction.guild).send(
                 content=content, embed=embed, view=view,
@@ -352,8 +367,7 @@ class ReportCommand(commands.Cog):
 
             view: discord.ui.View = discord.ui.View.from_message(message)
             for button in view.children:
-                if not button.url:
-                    button.disabled = False
+                button.disabled = False
 
             await message.edit(embed=embed, view=view)
             await interaction.response.send_message("This report has been reset.", ephemeral=True)
@@ -372,7 +386,7 @@ class ReportCommand(commands.Cog):
             if button == "Actioned":
                 view: discord.ui.View = discord.ui.View.from_message(msg)
                 for button in view.children:
-                    if not button.url:
+                    if not button.url and not button.style == discord.ButtonStyle.secondary:
                         button.disabled = True
 
                 embed: discord.Embed = msg.embeds[0]
@@ -407,7 +421,7 @@ class ReportCommand(commands.Cog):
             elif button == "False Positive":
                 view: discord.ui.View = discord.ui.View.from_message(msg)
                 for button in view.children:
-                    if not button.url:
+                    if not button.url and not button.style == discord.ButtonStyle.secondary:
                         button.disabled = True
 
                 embed: discord.Embed = msg.embeds[0]
@@ -437,6 +451,64 @@ class ReportCommand(commands.Cog):
                 embed.colour = discord.Colour.dark_red()
 
                 await interaction.response.edit_message(embed=embed, view=view)
+
+            elif button == "View Message History":
+                embed: discord.Embed = msg.embeds[0]
+
+                user_id = embed.description.split("`")[3]
+                user_tag = discord.utils.escape_markdown(embed.description.split('`')[1])
+
+                viewable_channels: list[int] = [ch.id for ch in interaction.guild.channels if
+                                                ch.permissions_for(interaction.user).view_channel]
+
+                recent_messages: list[discord.Message] = []
+
+                for message in self.bot.cached_messages: #loop through message cache
+                    if message.guild and message.guild.id == interaction.guild.id: #find current guild
+                        if message.author.id == int(user_id): #find correct user
+                            if message.channel.id in viewable_channels: #find viewable channels
+                                recent_messages.append(message)
+
+
+                embed_content = ""
+                file_content = ""
+                recent_messages.reverse()
+                for message in recent_messages:
+
+                    embed_content += f"_Message ID {message.id}_\n"
+                    embed_content += f"Channel: {message.channel.mention}\n"
+                    embed_content += f"Created: {discord.utils.format_dt(message.created_at)}\n"
+                    if message.content:
+                        embed_content += f"Content: `{message.clean_content.replace('`', '')}`\n\n"
+                    else:
+                        embed_content += f"Content: `None`\n\n"
+
+                    file_content += f"- Message ID {message.id}:\n"
+                    file_content += f"  Channel: #{message.channel.name}\n"
+                    file_content += f"  Created (UTC): {message.created_at.strftime('%Y-%m-%d %H:%M-%S')}\n"  # year-month-day hour:min:sec
+                    file_content += f"  Content: {message.clean_content}\n\n"
+
+                embed = discord.Embed(timestamp=discord.utils.utcnow())
+                embed.colour = discord.Colour(0x2F3136)
+
+                embed.description = f'{len(recent_messages)} recent messages from <@!{user_id}> ({user_tag}) found in {interaction.guild.name}.'
+                if embed_content != "":
+                    embed.description +=    f'\n\n**Recent Messages:**\n' \
+                                            f'{embed_content}'
+
+                if len(embed.description) > 4096 or len(embed) > 6000:
+                    # attach as a file
+                    content = "**Recent Messages!**"
+                    fileContent = f"{len(recent_messages)} recent messages from {user_tag} found in {interaction.guild.name}." \
+                                  f'\n\nRecent Messages:\n' \
+                                  f'{file_content}'
+
+                    buffer = BytesIO(fileContent.encode('utf-8'))
+                    file = discord.File(fp=buffer, filename='recent_messages.txt')
+
+                    await interaction.response.send_message(content=content, file=file, ephemeral=True)
+                else:
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 
