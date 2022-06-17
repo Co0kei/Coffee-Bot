@@ -18,6 +18,12 @@ class AboutCommand(commands.Cog):
         self.bot = bot
         self.process = psutil.Process()
 
+    @commands.command()
+    @commands.is_owner()
+    async def memory(self, ctx):
+        memory_usage = self.process.memory_full_info().uss / 1024 ** 2
+        await ctx.send(f"{memory_usage} MiB")
+
     @app_commands.command(name='about', description='Show statistics about me.')
     async def globalAboutCommand(self, interaction: discord.Interaction):
         await self.handleAboutCommand(interaction)

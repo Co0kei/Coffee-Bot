@@ -3,6 +3,7 @@ import datetime
 import gc
 import io
 import json
+import linecache
 import logging
 import os
 import re
@@ -11,6 +12,7 @@ import sys
 import textwrap
 import time
 import traceback
+import tracemalloc
 import typing
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -1178,7 +1180,85 @@ class OwnerCog(commands.Cog):
 
         await ctx.send(embed=embed, file=discord.File(io.BytesIO(render.encode()), filename='full_results.txt'))
 
+
+
+    def display_top(self, snapshot, key_type='lineno', limit=10):
+        snapshot = snapshot.filter_traces((
+            tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+            tracemalloc.Filter(False, "<unknown>"),
+        ))
+        top_stats = snapshot.statistics(key_type)
+
+        print("Top %s lines" % limit)
+        for index, stat in enumerate(top_stats[:limit], 1):
+            frame = stat.traceback[0]
+            print("#%s: %s:%s: %.1f KiB"
+                  % (index, frame.filename, frame.lineno, stat.size / 1024))
+            line = linecache.getline(frame.filename, frame.lineno).strip()
+            if line:
+                print('    %s' % line)
+
+        other = top_stats[limit:]
+        if other:
+            size = sum(stat.size for stat in other)
+            print("%s other: %.1f KiB" % (len(other), size / 1024))
+        total = sum(stat.size for stat in top_stats)
+        print("Total allocated size: %.1f KiB" % (total / 1024))
+
+    @commands.command(description="Record a snapshot")
+    async def snap1(self, ctx):
+        """ Record a snapshot """
+        self.bot.snapshot1 = tracemalloc.take_snapshot()
+
+    @commands.command(description="Display the differences since snap1")
+    async def snap2(self, ctx):
+        """ Display the differences since snap1 """
+        snapshot2 = tracemalloc.take_snapshot()
+
+        top_stats = snapshot2.compare_to(self.bot.snapshot1, 'lineno')
+
+        print("[ Top 10 differences ]")
+        for stat in top_stats[:10]:
+            print(stat)
+
+    @commands.command(description="Display the traceback of the biggest memory block")
+    async def snapbig(self, ctx):
+        """ Display the traceback of the biggest memory block """
+        snapshot = tracemalloc.take_snapshot()
+        top_stats = snapshot.statistics('traceback')
+
+        # pick the biggest memory block
+        stat = top_stats[0]
+        print("%s memory blocks: %.1f KiB" % (stat.count, stat.size / 1024))
+        for line in stat.traceback.format():
+            print(line)
+
+    @commands.command(description="Display the 10 files allocating the most memory")
+    async def snaptop(self, ctx):
+        """ Display the 10 files allocating the most memory """
+        snapshot = tracemalloc.take_snapshot()
+        top_stats = snapshot.statistics('lineno')
+
+        print("[ Top 10 ]")
+        for stat in top_stats[:10]:
+            print(stat)
+
+    @commands.command(description="Display the 10 files allocating the most memory with a pretty output")
+    async def snapprettytop(self, ctx):
+        """ Display the 10 files allocating the most memory with a pretty output """
+        snapshot = tracemalloc.take_snapshot()
+        self.display_top(snapshot)
+
+    @commands.command(description="Trigger explicity GC")
+    async def gccollect(self, ctx):
+        gc.collect()
+
 async def setup(bot):
     if not hasattr(bot, 'uptime'):
         bot.uptime = discord.utils.utcnow()
+
+        # Start tracing Python memory allocations
+        tracemalloc.start(25)  # Store 25 frames
+        bot.snapshot1 = tracemalloc.take_snapshot() #take first snapshot
+
     await bot.add_cog(OwnerCog(bot))
