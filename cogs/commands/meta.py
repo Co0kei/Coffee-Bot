@@ -48,7 +48,8 @@ class MetaCommands(commands.Cog):
     @commands.cooldown(5, 60.0, type=commands.BucketType.member)
     async def hello(self, ctx):
         owner = await self.bot.get_or_fetch_user(int(self.bot.owner_id))
-        await ctx.reply(f'Hello! I\'m a robot! {owner} made me.')
+        if ctx:
+            await ctx.reply(f'Hello! I\'m a robot! {owner} made me.')
 
     @commands.command(description="Shows you information about a number of characters", usage="<char>")
     async def charinfo(self, ctx, *, characters: str = None):

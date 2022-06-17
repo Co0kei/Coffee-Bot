@@ -25,8 +25,9 @@ class ErrorCog(commands.Cog):
 
     async def on_error(self, event, *args, **kwargs):
 
-        (exc_type, exc, tb) = sys.exc_info()
-        exc = ''.join(traceback.format_exception(exc_type, exc, tb, chain=True))
+        exc = traceback.format_exc()
+        #(exc_type, exc, tb) = sys.exc_info()
+        #exc = ''.join(traceback.format_exception(exc_type, exc, tb, chain=True))
 
         log.error(f'Error in event \'{event}\':\n{exc}')
 

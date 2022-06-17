@@ -4,7 +4,6 @@ import logging
 import math
 
 import discord
-import pkg_resources
 import psutil
 import pygit2
 from discord import app_commands
@@ -84,8 +83,8 @@ class AboutCommand(commands.Cog):
         # embed.add_field(name="Bot Ping", value=f"{self.bot.latency * 1000:.2f}ms")
         # embed.add_field(name="Socket Events", value=f"{cpm:.2f}/minute")
 
-        version = pkg_resources.get_distribution('discord.py').version
-        embed.set_footer(text=f'Made with discord.py v{version}', icon_url='http://i.imgur.com/5BFecvA.png')
+        #version = "1" #pkg_resources.get_distribution('discord.py').version
+        embed.set_footer(text=f'Made with discord.py', icon_url='http://i.imgur.com/5BFecvA.png')
         embed.timestamp = discord.utils.utcnow()
 
         view = self.CommitHistoryButton(commandsCog=self)
