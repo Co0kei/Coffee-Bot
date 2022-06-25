@@ -611,7 +611,14 @@ class OwnerCog(commands.Cog):
         minutes = delta.total_seconds() / 60
         total = sum(self.bot.socket_stats.values())
         cpm = total / minutes
-        await ctx.send(f'{total} socket events observed ({cpm:.2f}/minute) | {self.bot.socket_stats["MESSAGE_CREATE"] / minutes:.2f} messages/minute:\n{self.bot.socket_stats}')
+        await ctx.send(f'{total} socket events observed ({cpm:.2f}/minute)\n'
+                       f' - {self.bot.socket_stats["MESSAGE_CREATE"] / minutes:.2f} messages/minute\n'
+                       f' - {self.bot.socket_stats["MESSAGE_UPDATE"] / minutes:.2f} message updates/minute\n'
+                       f' - {self.bot.socket_stats["MESSAGE_DELETE"] / minutes:.2f} message deletes/minute\n'
+                        f' - {self.bot.socket_stats["MESSAGE_DELETE_BULK"] / minutes:.2f} bulk deletes/minute\n'
+                       f' - {self.bot.socket_stats["GUILD_MEMBER_UPDATE"] / minutes:.2f} guild member updates/minute\n'
+                       f'Events:'
+                       f'\n{self.bot.socket_stats}')
 
     @commands.is_owner()
     @commands.command(aliases=['cancel_task'], description="Debug a task by a memory location", usage="<memory_id>")
