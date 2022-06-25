@@ -117,7 +117,7 @@ class ReportCommand(commands.Cog):
         reason = ui.TextInput(label='Reason', style=discord.TextStyle.paragraph, placeholder="Report reason",
                               required=True, max_length=2000)
 
-        async def on_error(self, error: Exception, interaction: discord.Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -266,7 +266,7 @@ class ReportCommand(commands.Cog):
         reason = ui.TextInput(label='Reason', style=discord.TextStyle.paragraph, placeholder="Report reason",
                               required=True, max_length=2000)
 
-        async def on_error(self, error: Exception, interaction: discord.Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)

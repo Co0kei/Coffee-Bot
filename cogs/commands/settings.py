@@ -696,7 +696,7 @@ class SettingsCommand(commands.Cog):
                                placeholder="Please enter the channel name or id, such as #reports",
                                required=True, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -753,7 +753,7 @@ class SettingsCommand(commands.Cog):
                             placeholder="Please enter the role name or id, such as @reports",
                             required=True, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -813,7 +813,7 @@ class SettingsCommand(commands.Cog):
                             placeholder="Please enter the role name or id, such as @muted",
                             required=True, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -875,7 +875,7 @@ class SettingsCommand(commands.Cog):
                               placeholder="Enter any links to remove from the whitelist",
                               required=False, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -975,7 +975,7 @@ class SettingsCommand(commands.Cog):
                               placeholder="Enter any words to remove from the filter",
                               required=False, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -1057,7 +1057,7 @@ class SettingsCommand(commands.Cog):
                                placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -1114,7 +1114,7 @@ class SettingsCommand(commands.Cog):
                                placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -1172,7 +1172,7 @@ class SettingsCommand(commands.Cog):
                                placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -1231,7 +1231,7 @@ class SettingsCommand(commands.Cog):
                                placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -1290,7 +1290,7 @@ class SettingsCommand(commands.Cog):
                                placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -1349,7 +1349,7 @@ class SettingsCommand(commands.Cog):
                                placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -1408,7 +1408,7 @@ class SettingsCommand(commands.Cog):
                                placeholder="Please enter the channel name or id, such as #logs",
                                required=True, max_length=1000)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
@@ -1467,7 +1467,7 @@ class SettingsCommand(commands.Cog):
                               placeholder="Please enter the new prefix, such as -",
                               required=True, min_length=1, max_length=5)
 
-        async def on_error(self, error: Exception, interaction: Interaction) -> None:
+        async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
             log.exception(error)
             if interaction.response.is_done():
                 await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
