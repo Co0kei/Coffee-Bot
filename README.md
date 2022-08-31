@@ -11,3 +11,5 @@
 ### **For a detailed list of commands, features and examples, visit my [top.gg](https://top.gg/bot/950765718209720360) page!**
 
 ## [Invite Me!](https://discord.com/oauth2/authorize?client_id=950765718209720360&permissions=8&scope=bot%20applications.commands)
+
+Disclaimer: Coffee Bot is a personal project that has not been designed to be run by others. Therefore, self-hosting is not recommended, and I do not other support for this.
