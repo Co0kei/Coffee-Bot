@@ -93,7 +93,7 @@ class VoteCommand(commands.Cog):
                     button.disabled = True
 
         await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
-        view.message = await interaction.original_message()
+        view.message = await interaction.original_response()
 
     class VoteHistoryButton(discord.ui.View):
         def __init__(self, timeout=120, cog=None, user_id=None, total_votes=None, individual_votes=None, vote_history=None):
@@ -161,7 +161,7 @@ class VoteCommand(commands.Cog):
         async def voteHistory(self, interaction: discord.Interaction, button: discord.ui.Button):
             view = self.cog.PaginatedVoteHistory(main_view=self, total_pages=self.total_pages)
             await interaction.response.send_message(embed=self.get_embed(1), view=view, ephemeral=True)
-            view.message = await interaction.original_message()
+            view.message = await interaction.original_response()
 
         @discord.ui.button(label='Disable Vote Reminders', style=discord.ButtonStyle.gray)
         async def reminders(self, interaction: discord.Interaction, button: discord.ui.Button):

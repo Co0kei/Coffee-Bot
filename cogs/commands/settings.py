@@ -53,7 +53,7 @@ class SettingsCommand(commands.Cog):
                                  guild=guild,
                                  cog=self)
         await interaction.response.send_message(embed=embed, view=view)
-        view.message = await interaction.original_message()  # set message in view
+        view.message = await interaction.original_response()  # set message in view
 
     #  Main View & dropdown
     class SettingsView(discord.ui.View):

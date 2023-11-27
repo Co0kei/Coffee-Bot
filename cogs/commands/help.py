@@ -32,7 +32,7 @@ class HelpCommand(commands.Cog):
 
         view = self.MiscCommandsButton(cog=self)
         await interaction.response.send_message(embed=embed, view=view)
-        view.message = await interaction.original_message()
+        view.message = await interaction.original_response()
 
     class MiscCommandsButton(discord.ui.View):
 

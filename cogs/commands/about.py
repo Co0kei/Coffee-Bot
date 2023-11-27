@@ -91,7 +91,7 @@ class AboutCommand(commands.Cog):
 
         await interaction.response.send_message(embed=embed, view=view)
 
-        view.message = await interaction.original_message()
+        view.message = await interaction.original_response()
 
     class CommitHistoryButton(discord.ui.View):
 
@@ -126,7 +126,7 @@ class AboutCommand(commands.Cog):
 
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-            msg = await interaction.original_message()
+            msg = await interaction.original_response()
             view.setOriginalMessage(msg)  # pass the original message into the class
 
     class PaginatedCommitHistory(discord.ui.View):

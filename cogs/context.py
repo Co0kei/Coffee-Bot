@@ -69,7 +69,7 @@ class CustomContextCog(commands.Cog):
                 self.value = True
                 await interaction.response.defer()
                 if self.delete_after:
-                    await interaction.delete_original_message()
+                    await interaction.delete_original_response()
                 self.stop()
 
             @discord.ui.button(label='Cancel', style=discord.ButtonStyle.red)
@@ -77,7 +77,7 @@ class CustomContextCog(commands.Cog):
                 self.value = False
                 await interaction.response.defer()
                 if self.delete_after:
-                    await interaction.delete_original_message()
+                    await interaction.delete_original_response()
                 self.stop()
 
         async def prompt(
